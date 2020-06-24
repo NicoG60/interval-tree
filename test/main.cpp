@@ -2,6 +2,7 @@
 #define CATCH_CONFIG_ENABLE_BENCHMARKING
 #include <catch2/catch.hpp>
 #include <random>
+#include <chrono>
 
 #include <interval_tree.h>
 
@@ -169,9 +170,9 @@ TEST_CASE("Insertion")
 
     SECTION("Emplace 3 RL")
     {
-        auto it0 = tree.emplace({-2, 0}, "value0");
-        auto it2 = tree.emplace({0, 2}, "value2");
-        auto it1 = tree.emplace({-1, 1}, "value1");
+        auto it0 = tree.emplace(std::pair<int, int>{-2, 0}, "value0");
+        auto it2 = tree.emplace(std::pair<int, int>{0, 2}, "value2");
+        auto it1 = tree.emplace(std::pair<int, int>{-1, 1}, "value1");
 
         REQUIRE(it0 == tree.begin());
         REQUIRE(it0->first == std::pair<int, int>(-2, 0));
@@ -236,8 +237,8 @@ TEST_CASE("Ordering")
 
     std::srand(0); // Always the same seed. It's just to fill the container
 
-    for(int i = 0; i < 100; i++)
-        tree.emplace({std::rand(), std::rand()}, i);
+    for(std::size_t i = 0; i < 100; i++)
+        tree.emplace(std::pair<int, int>{std::rand(), std::rand()}, i);
 
 
     SECTION("Base")
@@ -257,8 +258,8 @@ TEST_CASE("Ordering")
 
     SECTION("With insert")
     {
-        for(int i = 0; i < 10; i++)
-            tree.emplace({std::rand(), std::rand()}, i);
+        for(std::size_t i = 0; i < 10; i++)
+            tree.emplace(std::pair<int, int>{std::rand(), std::rand()}, i);
 
         auto k = tree.begin()->first;
         auto s = tree.size();
@@ -275,11 +276,11 @@ TEST_CASE("Ordering")
 
     SECTION("With deletes")
     {
-        for(int i = 0; i < 10; i++)
+        for(std::size_t i = 0; i < 10; i++)
         {
             auto it = tree.begin();
 
-            for(int j = 0; j < (std::rand() % tree.size()); j++)
+            for(std::size_t j = 0; j < (std::rand() % tree.size()); j++)
                 it++;
             tree.erase(it);
         }
@@ -304,8 +305,9 @@ TEST_CASE("Ordering")
 
         for(auto it = tree.rbegin(); it != tree.rend(); it++)
         {
-            REQUIRE(k >= it->first);
-            k = it->first;
+            auto o = it->first;
+            REQUIRE(k >= o);
+            k = o;
             s--;
         }
 
@@ -314,8 +316,8 @@ TEST_CASE("Ordering")
 
     SECTION("reverse With insert")
     {
-        for(int i = 0; i < 10; i++)
-            tree.emplace({std::rand(), std::rand()}, i);
+        for(std::size_t i = 0; i < 10; i++)
+            tree.emplace(std::pair<int, int>{std::rand(), std::rand()}, i);
 
         auto k = tree.rbegin()->first;
         auto s = tree.size();
@@ -332,11 +334,11 @@ TEST_CASE("Ordering")
 
     SECTION("reverse With deletes")
     {
-        for(int i = 0; i < 10; i++)
+        for(std::size_t i = 0; i < 10; i++)
         {
             auto it = tree.begin();
 
-            for(int j = 0; j < (std::rand() % tree.size()); j++)
+            for(std::size_t j = 0; j < (std::rand() % tree.size()); j++)
                 it++;
             tree.erase(it);
         }
@@ -361,8 +363,8 @@ TEST_CASE("Find point")
 
     std::srand(0); // Always the same seed. It's just to fill the container
 
-    for(int i = 0; i < 100; i++)
-        tree.emplace({std::rand()%1000, std::rand()%1000}, i);
+    for(int i = 0; i < 10000; i++)
+        tree.emplace(std::pair<int, int>{std::rand()%1000, std::rand()%1000}, i);
 
     int point = 250; // Let's get all events at 250;
 
@@ -378,11 +380,23 @@ TEST_CASE("Find point")
             naive.push_back(v);
     }
 
-    std::vector<interval_tree<int, int>::value_type> find;
+    REQUIRE(!naive.empty());
+
+    std::vector<interval_tree<int, int>::iterator> find;
 
     tree.at(point, find);
 
-    REQUIRE(naive == find);
+    REQUIRE(!find.empty());
+
+    auto bf = find.begin();
+    auto bn = naive.begin();
+
+    while(bf != find.end() && bn != naive.end())
+    {
+        REQUIRE(**bf == *bn);
+        ++bf;
+        ++bn;
+    }
 }
 
 TEST_CASE("Find interval")
@@ -391,8 +405,8 @@ TEST_CASE("Find interval")
 
     std::srand(0); // Always the same seed. It's just to fill the container
 
-    for(int i = 0; i < 100; i++)
-        tree.emplace({std::rand()%1000, std::rand()%1000}, i);
+    for(std::size_t i = 0; i < 100; i++)
+        tree.emplace(std::pair<int, int>{std::rand()%1000, std::rand()%1000}, i);
 
     int low = 250;
     int high = 750; // Let's get all events in [250, 750];
@@ -409,25 +423,148 @@ TEST_CASE("Find interval")
             naive.push_back(v);
     }
 
-    std::vector<interval_tree<int, int>::value_type> find;
+    REQUIRE(!naive.empty());
+
+    std::vector<interval_tree<int, int>::iterator> find;
 
     tree.in(low, high, find);
 
-    REQUIRE(naive == find);
+    REQUIRE(!find.empty());
+
+    auto bf = find.begin();
+    auto bn = naive.begin();
+
+    while(bf != find.end() && bn != naive.end())
+    {
+        REQUIRE(**bf == *bn);
+        ++bf;
+        ++bn;
+    }
 }
 
-// TEST_CASE("Benchmark")
+class Chrono
+{
+public:
+    typedef std::chrono::high_resolution_clock       clock;
+    typedef clock::time_point                        time_point;
+    typedef std::chrono::duration<double, std::micro> duration;
+
+public:
+    Chrono() : tp(now()) {}
+
+    void start() { tp = now(); }
+
+    static time_point now() { return clock::now(); }
+
+    duration ellapsed() { return now() - tp; }
+
+private:
+    time_point tp;
+};
+
+void stats(const std::vector<Chrono::duration>& v, double& mean, double& stddev)
+{
+    mean = std::accumulate(v.begin(), v.end(), 0,
+    [](const double& a, const Chrono::duration& b)
+    {
+        return a + b.count();
+    });
+
+    mean /= v.size();
+
+    stddev = std::accumulate(v.begin(), v.end(), 0,
+    [=](const double& a, const Chrono::duration& b)
+    {
+        const double c = (b.count() - mean);
+        return a + (c * c);
+    });
+
+    stddev = std::sqrt(stddev/v.size());
+}
+
+TEST_CASE("Benchmark")
+{
+    interval_tree<int, int> tree;
+
+    std::srand(0); // Always the same seed. It's just to fill the container
+
+    for(int i = 0; i < 100000; i++)
+        tree.emplace(std::pair<int, int>{std::rand()%1000, std::rand()%1000}, i);
+
+    Chrono timer;
+    Chrono total;
+    std::vector<Chrono::duration> v(100);
+    double mean;
+    double stddev;
+
+    total.start();
+    for(int i = 0; i < 100; i++)
+    {
+        timer.start();
+        tree.emplace(std::pair<int, int>{std::rand()%1000, std::rand()%1000}, 101);
+        v[i] = timer.ellapsed();
+    }
+
+    std::cout << "Emplace 100 items. total: " << total.ellapsed().count() << "us" << std::endl;
+    stats(v, mean, stddev);
+    std::cout << " -> Mean: " << mean << "us, StdDev: " << stddev << "us" << std::endl;
+
+    total.start();
+    for(int i = 0; i < 100; i++)
+    {
+        timer.start();
+        tree.insert({{std::rand()%1000, std::rand()%1000}, 102});
+        v[i] = timer.ellapsed();
+    }
+
+    std::cout << "Insert 100 items. total: " << total.ellapsed().count() << "us" << std::endl;
+    stats(v, mean, stddev);
+    std::cout << " -> Mean: " << mean << "us, StdDev: " << stddev << "us" << std::endl;
+
+    std::vector<interval_tree<int, int>::iterator> find;
+    find.reserve(1000);
+
+    total.start();
+    for(int i = 0; i < 100; i++)
+    {
+        timer.start();
+        tree.at(std::rand()%1000, find);
+        v[i] = timer.ellapsed();
+        find.clear();
+    }
+
+    std::cout << "Find 100 times points. total: " << total.ellapsed().count() << "us" << std::endl;
+    stats(v, mean, stddev);
+    std::cout << " -> Mean: " << mean << "us, StdDev: " << stddev << "us" << std::endl;
+
+    total.start();
+    for(int i = 0; i < 100; i++)
+    {
+        timer.start();
+        tree.in(std::rand()%1000, std::rand()%1000, find);
+        v[i] = timer.ellapsed();
+        find.clear();
+    }
+
+    std::cout << "Find 100 times interval. total: " << total.ellapsed().count() << "us" << std::endl;
+    stats(v, mean, stddev);
+    std::cout << " -> Mean: " << mean << "us, StdDev: " << stddev << "us" << std::endl;
+}
+
+// TEST_CASE("Benchmark 2")
 // {
 //     interval_tree<int, int> tree;
 
 //     std::srand(0); // Always the same seed. It's just to fill the container
 
-//     for(int i = 0; i < 150000; i++)
-//         tree.emplace({std::rand()%1000, std::rand()%1000}, i);
+//     for(int i = 0; i < 15000; i++)
+//         tree.emplace(std::pair<int, int>{std::rand()%1000, std::rand()%1000}, i);
+
+//     std::vector<interval_tree<int, int>::iterator> find;
 
 //     BENCHMARK("Emplace")
 //     {
-//         return tree.emplace({std::rand()%1000, std::rand()%1000}, 101);
+//         return tree.emplace(std::pair<int, int>{std::rand()%1000, std::rand()%1000}, 101);
 //     };
 
 //     BENCHMARK("Insert")
@@ -437,14 +574,13 @@ TEST_CASE("Find interval")
 
 //     BENCHMARK("Find point")
 //     {
-//         std::vector<interval_tree<int, int>::value_type> find;
+
 //         tree.at(250, find);
 //         return;
 //     };
 
 //     BENCHMARK("Find interval")
 //     {
-//         std::vector<interval_tree<int, int>::value_type> find;
 //         tree.in(250, 750, find);
 //         return;
 //     };
