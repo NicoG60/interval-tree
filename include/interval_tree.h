@@ -856,23 +856,14 @@ private:
     template<class IT>
     void search(node* n, const key_type& interval, std::vector<IT>& r) const
     {
-        // if interval is to the right of every node, there wont be any match
-        if(comp.greater(interval.first, n->max))
-            return;
-
-        // search the left side
-        if(n->left)
-            search(n->left, interval, r);
-
         // if the current node matches
         if(interval_overlaps(interval, n->key()))
             r.emplace_back(this, n);
 
-        // if interval is to the left of this one, they wont be any match to the right
-        if(comp.less(interval.second, n->lower()))
-            return;
+        if(n->left && comp.greater_eq(n->left->max, interval.first))
+            search(n->left, interval, r);
 
-        if(n->right)
+        if(n->right && comp.greater_eq(interval.second, n->lower()))
             search(n->right, interval, r);
     }
 
