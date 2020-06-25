@@ -204,18 +204,20 @@ TEST_CASE("Deletion")
     {
         auto it = tree.erase(tree.begin());
 
+        REQUIRE(tree.size() == 6);
         REQUIRE(it->first == std::pair<int, int>(1, 2));
         REQUIRE(it->second == "value1");
-        REQUIRE(tree.size() == 6);
+
     }
 
     SECTION("Delete middle")
     {
         auto it = tree.erase(++tree.begin());
 
+        REQUIRE(tree.size() == 6);
         REQUIRE(it->first == std::pair<int, int>(2, 3));
         REQUIRE(it->second == "value2");
-        REQUIRE(tree.size() == 6);
+
     }
 
     SECTION("Delete root")
@@ -225,9 +227,10 @@ TEST_CASE("Deletion")
         it++;
         it = tree.erase(it);
 
+        REQUIRE(tree.size() == 6);
         REQUIRE(it->first == std::pair<int, int>(4, 5));
         REQUIRE(it->second == "value4");
-        REQUIRE(tree.size() == 6);
+
     }
 }
 
