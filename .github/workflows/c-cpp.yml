@@ -28,6 +28,7 @@ jobs:
     - name: cmake
       run: cmake ..
       working-directory: build
+      if: runner.os != 'Windows'
       
     - name: make
       run: make
@@ -38,6 +39,11 @@ jobs:
       run: make test
       working-directory: build
       if: runner.os != 'Windows'
+      
+    - name: cmake
+      run: cmake -G"NMake Makefiles" ..
+      working-directory: build
+      if: runner.os == 'Windows'
     
     - name: nmake
       run: nmake.exe
