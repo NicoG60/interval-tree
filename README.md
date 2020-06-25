@@ -1,6 +1,6 @@
-# interval-tree
+# interval-tree ![C/C++ CI](https://github.com/NicoG60/interval-tree/workflows/C/C++%20CI/badge.svg?branch=master)
 
-Implementation of an AVL Augmented Tree in the STL fashion
+Implementation of an Augmented AVL interval Tree in the STL fashion
 
 
 
