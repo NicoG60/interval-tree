@@ -409,7 +409,7 @@ public:
         return emplace(std::forward<value_type>(value));
     }
 
-    template<class P, std::enable_if<std::is_convertible<value_type, P&&>::value, int>::type = 0>
+    template<class P, typename std::enable_if<std::is_convertible<value_type, P&&>::value, int>::type = 0>
     iterator insert(P&& value)
     {
         return emplace(std::forward(value));
@@ -425,7 +425,7 @@ public:
         return emplace_hint(hint, std::forward(value));
     }
 
-    template<class P, std::enable_if<std::is_convertible<value_type, P&&>::value, int>::type = 0>
+    template<class P, typename std::enable_if<std::is_convertible<value_type, P&&>::value, int>::type = 0>
     iterator insert(const_iterator hint, P&& value)
     {
         return emplace_hint(hint, std::forward<P>(value));
