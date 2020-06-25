@@ -28,6 +28,7 @@ jobs:
     - name: cmake
       run: cmake ..
       working-directory: build
+      if: runner.os != 'Windows'
       
     - name: make
       run: make
@@ -35,9 +36,14 @@ jobs:
       if: runner.os != 'Windows'
       
     - name: test
-      run: make test
+      run: ./interval_tree_test
       working-directory: build
       if: runner.os != 'Windows'
+      
+    - name: cmake
+      run: cmake -G"NMake Makefiles" ..
+      working-directory: build
+      if: runner.os == 'Windows'
     
     - name: nmake
       run: nmake.exe
@@ -45,6 +51,6 @@ jobs:
       if: runner.os == 'Windows'
       
     - name: test
-      run: nmake.exe test
+      run: .\interval_tree_test.exe
       working-directory: build
       if: runner.os == 'Windows'
