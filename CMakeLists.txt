@@ -6,4 +6,8 @@ set(CMAKE_CXX_STANDARD 17)
 include_directories(./include)
 include_directories(./third_party/Catch2/single_include)
 
+enable_testing()
+
 add_executable(${PROJECT_NAME} test/main.cpp)
+
+add_test(NAME AllTests COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME})
