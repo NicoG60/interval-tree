@@ -856,12 +856,12 @@ private:
     template<class IT>
     void search(node* n, const key_type& interval, std::vector<IT>& r) const
     {
+        if(n->left && comp.greater_eq(n->left->max, interval.first))
+            search(n->left, interval, r);
+
         // if the current node matches
         if(interval_overlaps(interval, n->key()))
             r.emplace_back(this, n);
-
-        if(n->left && comp.greater_eq(n->left->max, interval.first))
-            search(n->left, interval, r);
 
         if(n->right && comp.greater_eq(interval.second, n->lower()))
             search(n->right, interval, r);
