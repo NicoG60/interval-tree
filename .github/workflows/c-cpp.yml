@@ -1,0 +1,48 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v2
+      
+    - uses: ilammy/msvc-dev-cmd@v1
+      if: runner.os == Windows
+      
+    - name: make build dir
+      run: mkdir build
+      
+    - name: cmake
+      run: cmake ..
+      working-directory: build
+      
+    - name: make
+      run: make
+      working-directory: build
+      if: runner.os != Windows
+      
+    - name: test
+      run: make test
+      working-directory: build
+      if: runner.os != Windows
+    
+    - name: nmake
+      run: nmake.exe
+      working-directory: build
+      if: runner.os == Windows
+      
+    - name: test
+      run: nmake.exe test
+      working-directory: build
+      if: runner.os == Windows
