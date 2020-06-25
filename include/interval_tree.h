@@ -47,8 +47,9 @@ public:
         node* left   = nullptr;
         node* right  = nullptr;
 
-        int         height = 1;
-        bound_type  max    = 0;
+        int         height  = 1;
+        int         bfactor = 0;
+        bound_type  max     = 0;
         value_type  data;
     };
 
@@ -105,6 +106,7 @@ public:
     class iterator
     {
         friend class interval_tree;
+        friend class std::vector<iterator>;
 
     public:
         typedef interval_tree::difference_type  difference_type;
@@ -115,10 +117,8 @@ public:
         typedef interval_tree::const_reference  const_reference;
         typedef std::bidirectional_iterator_tag iterator_category;
 
-    protected:
-        iterator(interval_tree* t, node* n = nullptr) : tree(t), n(n) {}
-
     public:
+        iterator(const interval_tree* t, node* n = nullptr) : tree(t), n(n) {}
         iterator() = default;
 
         inline void swap(iterator& other) noexcept
@@ -192,31 +192,28 @@ public:
         }
 
     protected:
-        interval_tree* tree = nullptr;
-        node*          n    = nullptr;
+        const interval_tree* tree = nullptr;
+        node*                n    = nullptr;
     };
 
     class const_iterator : public iterator
     {
         friend class interval_tree;
+
     public:
         typedef typename iterator::const_pointer   pointer;
         typedef typename iterator::const_reference reference;
 
-    protected:
-        const_iterator(interval_tree* t, node* n = nullptr) : iterator(t, n) {}
-
     public:
+        const_iterator(const interval_tree* t, node* n = nullptr) : iterator(t, n) {}
         const_iterator() = default;
     };
 
     class reverse_iterator : public iterator
     {
         friend class interval_tree;
-    protected:
-        reverse_iterator(interval_tree* t, node* n = nullptr) : iterator(t, n) {}
-
     public:
+        reverse_iterator(const interval_tree* t, node* n = nullptr) : iterator(t, n) {}
         reverse_iterator() = default;
 
         inline iterator& operator++()    { return iterator::operator--();  }
@@ -228,10 +225,8 @@ public:
     class reverse_const_iterator : public const_iterator
     {
         friend class interval_tree;
-    protected:
-        reverse_const_iterator(interval_tree* t, node* n = nullptr) : const_iterator(t, n) {}
-
     public:
+        reverse_const_iterator(const interval_tree* t, node* n = nullptr) : const_iterator(t, n) {}
         reverse_const_iterator() = default;
 
         inline iterator& operator++()    { return iterator::operator--();  }
@@ -479,12 +474,18 @@ public:
 
     iterator erase(const_iterator pos)
     {
-        return iterator(this, remove(pos.n));
+        if(pos.n)
+            return iterator(this, remove(pos.n));
+        else
+            return iterator(this);
     }
 
     iterator erase(iterator pos)
     {
-        return iterator(this, remove(pos.n));
+        if(pos.n)
+            return iterator(this, remove(pos.n));
+        else
+            return iterator(this);
     }
 
     iterator erase(const_iterator first, const_iterator last)
@@ -623,6 +624,17 @@ public:
 
     // ====== PRIVATE ==========================================================
 private:
+    node* find_root(node* n) const
+    {
+        if(!n)
+            return nullptr;
+
+        while(n->parent)
+            n = n->parent;
+
+        return n;
+    }
+
     node* clone(node* n, node* p = nullptr) const
     {
         node* nn = new node(n->data);
@@ -639,30 +651,39 @@ private:
         return nn;
     }
 
-    void update_height_max(node* n)
+    void update_props(node* n)
     {
         bound_type m = n->upper();
-        bound_type h = 1;
-
-        if(n->left)
-        {
-            m = std::max(m, n->left->max);
-            h = std::max(h, n->left->height + 1);
-        }
+        int        h = 1;
+        int        b = 0;
 
         if(n->right)
         {
             m = std::max(m, n->right->max);
-            h = std::max(h, n->right->height + 1);
+            h = n->right->height + 1;
+            b = n->right->height;
         }
 
-        if(n->max != m || n->height != h || (!n->left && !n->right))
+        if(n->left)
         {
-            n->max = m;
-            n->height = h;
+            m  = std::max(m, n->left->max);
+            h  = std::max(h, n->left->height + 1);
+            b -= n->left->height;
+        }
+
+
+
+        if(n->max     != m ||
+           n->height  != h ||
+           n->bfactor != b ||
+           (!n->left && !n->right))
+        {
+            n->max     = m;
+            n->height  = h;
+            n->bfactor = b;
 
             if(n->parent)
-                update_height_max(n->parent);
+                update_props(n->parent);
         }
     }
 
@@ -730,12 +751,6 @@ private:
         return n->parent;
     }
 
-    inline int balance_factor(node* n) const
-    {
-        return (n->right ? n->right->height : 0)
-               - (n->left ? n->left->height : 0);
-    }
-
     node* rotate_right(node* n)
     {
         node* tmp = n->left;
@@ -744,19 +759,20 @@ private:
         if(n->left)
             n->left->parent = n;
 
-        tmp->parent = n->parent;
-        if(tmp->parent)
+
+        if(n->parent)
         {
-            if(n == tmp->parent->left)
-                tmp->parent->left = tmp;
+            if(is_left_child(n))
+                n->parent->left = tmp;
             else
-                tmp->parent->right = tmp;
+                n->parent->right = tmp;
         }
 
-        tmp->right = n;
-        n->parent = tmp;
+        tmp->parent = n->parent;
+        tmp->right  = n;
+        n->parent   = tmp;
 
-        update_height_max(n);
+        update_props(n);
 
         return tmp;
     }
@@ -769,19 +785,20 @@ private:
         if(n->right)
             n->right->parent = n;
 
-        tmp->parent = n->parent;
-        if(tmp->parent)
+
+        if(n->parent)
         {
-            if(n == tmp->parent->left)
-                tmp->parent->left = tmp;
+            if(is_left_child(n))
+                n->parent->left = tmp;
             else
-                tmp->parent->right = tmp;
+                n->parent->right = tmp;
         }
 
-        tmp->left = n;
-        n->parent = tmp;
+        tmp->parent = n->parent;
+        tmp->left   = n;
+        n->parent   = tmp;
 
-        update_height_max(n);
+        update_props(n);
 
         return tmp;
     }
@@ -848,8 +865,8 @@ private:
             search(n->left, interval, r);
 
         // if the current node matches
-        if(intervalOverlaps(interval, n->key()))
-            r.push_back(IT(const_cast<interval_tree*>(this), n));
+        if(interval_overlaps(interval, n->key()))
+            r.emplace_back(this, n);
 
         // if interval is to the left of this one, they wont be any match to the right
         if(comp.less(interval.second, n->lower()))
@@ -870,9 +887,11 @@ private:
         else
             p->right = n;
 
-        update_height_max(n);
+        update_props(n);
 
         rebalance(p);
+
+        root = find_root(n);
 
         node_count++;
     }
@@ -882,22 +901,27 @@ private:
         node* r = next(n);
 
         if(n->left && n->right)
+            swap_nodes(n, r);
+
+        node* v = n->left ? n->left : n->right;
+
+        replace_in_parent(n, v);
+
+        node_count--;
+
+        v = v ? v : n->parent;
+
+        if(v)
         {
-            node* s = leftest(n->right);
-            n->data = s->data;
-            n->max = s->max;
-            remove(s);
-            return r;
+            update_props(v);
+            rebalance(v);
+            root = find_root(v);
         }
-        else if(n->left)
-            replace_in_parent(n, n->left);
-        else if(n->right)
-            replace_in_parent(n, n->right);
-        else
-            replace_in_parent(n, nullptr);
+        else if(node_count == 0)
+            root = nullptr;
 
         delete n;
-        node_count--;
+
         return r;
     }
 
@@ -908,33 +932,81 @@ private:
 
         if(n->parent)
         {
-            if(n == n->parent->left)
+            if(is_left_child(n))
                 n->parent->left = v;
             else
                 n->parent->right = v;
-
-            rebalance(n->parent);
         }
-        else
-            root = v;
+    }
 
-        if(v)
-            update_height_max(v);
+    void swap_nodes(node* a, node* b)
+    {
+        std::swap(a->height , b->height);
+        std::swap(a->bfactor, b->bfactor);
+
+        //================================
+
+        node* pa = a->parent;
+        node* la = a->left;
+        node* ra = a->right;
+
+        node* pb = b->parent;
+        node* lb = b->left;
+        node* rb = b->right;
+
+        a->parent = pb == a ? b : pb;
+        a->left   = lb == a ? b : lb;
+        a->right  = rb == a ? b : rb;
+
+        b->parent = pa == b ? a : pa;
+        b->left   = la == b ? a : la;
+        b->right  = ra == b ? a : ra;
+
+        //================================
+
+        if(a->parent)
+        {
+            if(a->parent->left == b)
+                a->parent->left = a;
+            else
+                a->parent->right = a;
+        }
+
+        if(a->left)
+            a->left->parent = a;
+
+        if(a->right)
+            a->right->parent = a;
+
+        //================================
+
+        if(b->parent)
+        {
+            if(b->parent->left == a)
+                b->parent->left = b;
+            else
+                b->parent->right = b;
+        }
+
+        if(b->left)
+            b->left->parent = b;
+
+        if(b->right)
+            b->right->parent = b;
     }
 
     void rebalance(node* n)
     {
-        int f = balance_factor(n);
-        if(f < -1)
+        if(n->bfactor < -1)
         {
-            if(n->left && balance_factor(n->left) > 0)
+            if(n->left && n->left->bfactor > 0)
                 n->left = rotate_left(n->left);
 
             n = rotate_right(n);
         }
-        else if(f > 1)
+        else if(n->bfactor > 1)
         {
-            if(n->right && balance_factor(n->right) < 0)
+            if(n->right && n->right->bfactor < 0)
                 n->right = rotate_right(n->right);
 
             n = rotate_left(n);
@@ -946,7 +1018,7 @@ private:
             root = n;
     }
 
-    bool intervalOverlaps(const key_type& a, const key_type& b) const
+    bool interval_overlaps(const key_type& a, const key_type& b) const
     {
         return comp.less_eq(a.first, b.second) && comp.greater_eq(a.second, b.first);
     }

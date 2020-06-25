@@ -494,6 +494,8 @@ TEST_CASE("Benchmark")
     for(int i = 0; i < 100000; i++)
         tree.emplace(std::pair<int, int>{std::rand()%1000, std::rand()%1000}, i);
 
+    REQUIRE(tree.size() == 100000);
+
     Chrono timer;
     Chrono total;
     std::vector<Chrono::duration> v(100);
@@ -503,9 +505,12 @@ TEST_CASE("Benchmark")
     total.start();
     for(int i = 0; i < 100; i++)
     {
+        std::size_t before = tree.size();
         timer.start();
         tree.emplace(std::pair<int, int>{std::rand()%1000, std::rand()%1000}, 101);
         v[i] = timer.ellapsed();
+
+        REQUIRE(tree.size() == before+1);
     }
 
     std::cout << "Emplace 100 items. total: " << total.ellapsed().count() << "us" << std::endl;
@@ -515,9 +520,11 @@ TEST_CASE("Benchmark")
     total.start();
     for(int i = 0; i < 100; i++)
     {
+        std::size_t before = tree.size();
         timer.start();
         tree.insert({{std::rand()%1000, std::rand()%1000}, 102});
         v[i] = timer.ellapsed();
+        REQUIRE(tree.size() == before+1);
     }
 
     std::cout << "Insert 100 items. total: " << total.ellapsed().count() << "us" << std::endl;
@@ -530,10 +537,12 @@ TEST_CASE("Benchmark")
     total.start();
     for(int i = 0; i < 100; i++)
     {
+        std::size_t before = tree.size();
+        find.clear();
         timer.start();
         tree.at(std::rand()%1000, find);
         v[i] = timer.ellapsed();
-        find.clear();
+        REQUIRE(tree.size() == before);
     }
 
     std::cout << "Find 100 times points. total: " << total.ellapsed().count() << "us" << std::endl;
@@ -543,48 +552,85 @@ TEST_CASE("Benchmark")
     total.start();
     for(int i = 0; i < 100; i++)
     {
+        std::size_t before = tree.size();
+        find.clear();
         timer.start();
         tree.in(std::rand()%1000, std::rand()%1000, find);
         v[i] = timer.ellapsed();
-        find.clear();
+        REQUIRE(tree.size() == before);
     }
 
     std::cout << "Find 100 times interval. total: " << total.ellapsed().count() << "us" << std::endl;
     stats(v, mean, stddev);
     std::cout << " -> Mean: " << mean << "us, StdDev: " << stddev << "us" << std::endl;
+
+    REQUIRE(find.size() > 100);
+
+    total.start();
+    for(int i = 0; i < 100; i++)
+    {
+        std::size_t before = tree.size();
+        timer.start();
+        tree.erase(find[i]);
+        v[i] = timer.ellapsed();
+        REQUIRE(tree.size() == before-1);
+    }
+
+    std::cout << "erase 100 random. total: " << total.ellapsed().count() << "us" << std::endl;
+    stats(v, mean, stddev);
+    std::cout << " -> Mean: " << mean << "us, StdDev: " << stddev << "us" << std::endl;
+
+    total.start();
+    for(int i = 0; i < 100; i++)
+    {
+        std::size_t before = tree.size();
+        timer.start();
+        tree.erase(tree.begin());
+        v[i] = timer.ellapsed();
+        REQUIRE(tree.size() == before-1);
+    }
+
+    std::cout << "erase 100 begin. total: " << total.ellapsed().count() << "us" << std::endl;
+    stats(v, mean, stddev);
+    std::cout << " -> Mean: " << mean << "us, StdDev: " << stddev << "us" << std::endl;
 }
 
-// TEST_CASE("Benchmark 2")
-// {
-//     interval_tree<int, int> tree;
+ TEST_CASE("Benchmark 2")
+ {
+     interval_tree<int, int> tree;
 
-//     std::srand(0); // Always the same seed. It's just to fill the container
+     std::srand(0); // Always the same seed. It's just to fill the container
 
-//     for(int i = 0; i < 15000; i++)
-//         tree.emplace(std::pair<int, int>{std::rand()%1000, std::rand()%1000}, i);
+     for(int i = 0; i < 100000; i++)
+         tree.emplace(std::pair<int, int>{std::rand()%1000, std::rand()%1000}, i);
 
-//     std::vector<interval_tree<int, int>::iterator> find;
+     std::vector<interval_tree<int, int>::iterator> find;
 
-//     BENCHMARK("Emplace")
-//     {
-//         return tree.emplace(std::pair<int, int>{std::rand()%1000, std::rand()%1000}, 101);
-//     };
+     BENCHMARK("Emplace")
+     {
+         return tree.emplace(std::pair<int, int>{std::rand()%1000, std::rand()%1000}, 101);
+     };
 
-//     BENCHMARK("Insert")
-//     {
-//         return tree.insert({{std::rand()%1000, std::rand()%1000}, 101});
-//     };
+     BENCHMARK("Insert")
+     {
+         return tree.insert({{std::rand()%1000, std::rand()%1000}, 101});
+     };
 
-//     BENCHMARK("Find point")
-//     {
+     BENCHMARK_ADVANCED("Find point")(Catch::Benchmark::Chronometer meter)
+     {
+         find.clear();
+         meter.measure([&](){ tree.at(std::rand()%1000, find); return &find; });
+     };
 
-//         tree.at(250, find);
-//         return;
-//     };
+     BENCHMARK_ADVANCED("Find interval")(Catch::Benchmark::Chronometer meter)
+     {
+         find.clear();
+         meter.measure([&](){ tree.in(std::rand()%1000, std::rand()%1000, find); return &find; });
+     };
 
-//     BENCHMARK("Find interval")
-//     {
-//         tree.in(250, 750, find);
-//         return;
-//     };
-// }
+     BENCHMARK("Erase")
+     {
+         return tree.erase(tree.begin());
+     };
+
+ }
