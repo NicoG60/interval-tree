@@ -13,7 +13,3 @@ Returns an iterator to the first element of the container. If the container is e
 #### Returns
 
 Iterator to the first element.
-
-#### Complexity
-
-Linear in size

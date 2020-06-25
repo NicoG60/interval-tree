@@ -12,4 +12,4 @@ Checks if the container has no elements, i.e. whether `begin() == end()`.
 
 #### Complexity
 
-Linear in size
+Constant

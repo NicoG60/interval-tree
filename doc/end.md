@@ -13,7 +13,3 @@ Returns an iterator to the element following the last element of the container. 
 #### Returns
 
 Iterator to the element following the last element.
-
-#### Complexity
-
-Linear in size

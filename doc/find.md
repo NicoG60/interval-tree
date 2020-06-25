@@ -1,7 +1,7 @@
 # interval_tree<Key, Value, Comp>::find
 
 ```cpp
-iterator find( const key_type& key );
+iterator       find( const key_type& key );
 const_iterator find( const key_type& key ) const;
 ```
 

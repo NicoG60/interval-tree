@@ -13,7 +13,3 @@ Returns a reverse iterator to the first element of the reversed container. It co
 #### Returns
 
 Reverse iterator to the first element.
-
-#### Complexity
-
-Linear in size

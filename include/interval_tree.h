@@ -38,10 +38,10 @@ public:
         template<class... Args>
         node(Args&& ...args) : data(std::forward<Args>(args)...) {}
 
-        inline const key_type&    key()         { return data.first;   }
-        inline const bound_type&  lower_bound() { return key().first;  }
-        inline const bound_type&  upper_boung() { return key().second; }
-        inline       mapped_type& value()       { return data.second;  }
+        inline const key_type&    key()   { return data.first;   }
+        inline const bound_type&  lower() { return key().first;  }
+        inline const bound_type&  upper() { return key().second; }
+        inline       mapped_type& value() { return data.second;  }
 
         node* parent = nullptr;
         node* left   = nullptr;
@@ -245,8 +245,8 @@ public:
 
 public:
     // ====== CONSTRUCTORS =====================================================
-    interval_tree() {};
-    interval_tree(const Compare& comp) : comp(comp) {}
+    interval_tree() = default;
+    explicit interval_tree(const Compare& comp) : comp(comp) {}
 
     template<class InputIt>
     interval_tree(InputIt first, InputIt last, const Compare& comp = Compare()) :
@@ -268,8 +268,7 @@ public:
     // ====== DESTRUCTOR =======================================================
     ~interval_tree()
     {
-        if(root)
-            delete_node(root);
+        clear();
     }
 
 
@@ -280,7 +279,7 @@ public:
             delete_node(root);
 
         root = clone(copy.root);
-        node_count = count(root);
+        node_count = copy.node_count;
         comp = copy.comp;
 
         return *this;
@@ -292,7 +291,7 @@ public:
             delete_node(root);
 
         root = std::move(move.root);
-        node_count = count(root);
+        node_count = std::move(move.node_count);
         comp = std::move(move.comp);
 
         return *this;
@@ -453,7 +452,7 @@ public:
         node* n = new node(std::forward<Args>(args)...);
 
         if(root)
-            insert(root, n);
+            insert(n);
         else
         {
             node_count ++;
@@ -506,7 +505,7 @@ public:
         if(!root)
             return 0;
 
-        node* n = find_first(root, key);
+        node* n = find(root, key);
 
         if(!n)
             return 0;
@@ -532,28 +531,7 @@ public:
 
     size_type count(const key_type& key) const
     {
-        if(!root)
-            return 0;
-
-        node* n = find_first(root, key);
-
-        if(!n)
-            return 0;
-
-        size_type r = 0;
-
-        do {
-            n = next(n);
-            ++r;
-        } while(n && comp.eq(n->key(), key));
-
-        return r;
-    }
-
-    template<class K>
-    size_type count(const K& k) const
-    {
-        return count(key_type(k));
+        return std::distance(lower_bound(key), upper_bound(key));
     }
 
     void at(const Key& point, std::vector<iterator>& results)
@@ -590,42 +568,42 @@ public:
 
     iterator find(const key_type& k)
     {
-        return lower_bound(k);
+        return _find<iterator>(k);
     }
 
     const_iterator find(const key_type& k) const
     {
-        return lower_bound(k);
+        return _find<const_iterator>(k);
     }
 
     std::pair<iterator,iterator> equal_range(const key_type& key)
     {
-        return equal_range<iterator>(key);
+        return _equal_range<iterator>(key);
     }
 
     std::pair<const_iterator,const_iterator> equal_range(const key_type& key) const
     {
-        return equal_range<const_iterator>(key);
+        return _equal_range<const_iterator>(key);
     }
 
     iterator lower_bound(const key_type& k)
     {
-        return lower_bound<iterator>(k);
+        return _lower_bound<iterator>(k);
     }
 
     const_iterator lower_bound(const key_type& k) const
     {
-        return lower_bound<const_iterator>(k);
+        return _lower_bound<const_iterator>(k);
     }
 
     iterator upper_bound(const key_type& k)
     {
-        return upper_bound<iterator>(k);
+        return _upper_bound<iterator>(k);
     }
 
     const_iterator upper_bound(const key_type& k) const
     {
-        return upper_bound<const_iterator>(k);
+        return _upper_bound<const_iterator>(k);
     }
 
 
@@ -663,7 +641,7 @@ private:
 
     void update_height_max(node* n)
     {
-        bound_type m = n->upper_boung();
+        bound_type m = n->upper();
         bound_type h = 1;
 
         if(n->left)
@@ -758,14 +736,6 @@ private:
                - (n->left ? n->left->height : 0);
     }
 
-    size_type count(node* n) const
-    {
-        if(!n)
-            return 0;
-
-        return 1 + count(n->left) + count(n->right);
-    }
-
     node* rotate_right(node* n)
     {
         node* tmp = n->left;
@@ -816,35 +786,54 @@ private:
         return tmp;
     }
 
-    node* find_root(node* n) const
+    node* lower_bound(node* n, const key_type& k) const
     {
-        while(n->parent)
-            n = n->parent;
+        node* r = nullptr;
+        while(n)
+        {
+            if(!comp.less(n->key(), k))
+            {
+                r = n;
+                n = n->left;
+            }
+            else
+                n = n->right;
+        }
 
-        return n;
+        return r;
     }
 
-    node* find_first(node* n, const key_type& k) const
+    node* upper_bound(node* n, const key_type& k) const
     {
-        if(comp.eq(n->key(), k))
-            return n;
-        else if(n->left && comp.less(k, n->key()))
-            return find_first(n->left, k);
-        else if(n->right && comp.greater(k, n->key()))
-            return find_first(n->right, k);
-        else
-            return nullptr;
+        node* r = nullptr;
+        while(n)
+        {
+            if(comp.greater(n->key(), k))
+            {
+                r = n;
+                n = n->left;
+            }
+            else
+                n = n->right;
+        }
+
+        return r;
     }
 
     node* find_last(node* n, const key_type& k) const
     {
-        bool c = comp(k, n->key());
-        if(c && n->left)
-            return find_last(n->left, k);
-        else if(!c && n->right)
-            return find_last(n->right, k);
-        else
-            return n;
+        node* r = n;
+
+        while(n)
+        {
+            r = n;
+            if(comp(k, n->key()))
+                n = n->left;
+            else
+                n = n->right;
+        }
+
+        return r;
     }
 
     template<class IT>
@@ -863,16 +852,16 @@ private:
             r.push_back(IT(const_cast<interval_tree*>(this), n));
 
         // if interval is to the left of this one, they wont be any match to the right
-        if(comp.less(interval.second, n->lower_bound()))
+        if(comp.less(interval.second, n->lower()))
             return;
 
         if(n->right)
             search(n->right, interval, r);
     }
 
-    void insert(node* r, node* n)
+    void insert(node* n)
     {
-        node* p = find_last(r, n->key());
+        node* p = find_last(root, n->key());
 
         n->parent = p;
 
@@ -963,34 +952,32 @@ private:
     }
 
     template<class IT>
-    IT lower_bound(const key_type& k) const
+    IT _find(const key_type& k) const
     {
-        if(root)
-            return IT(this, find_last(root, k));
-        else
-            return IT(this);
+        node* n = lower_bound(root, k);
+
+        if(n && comp.eq(n->key(), k))
+            return n;
+
+        return nullptr;
     }
 
     template<class IT>
-    IT upper_bound(const key_type& k) const
+    IT _lower_bound(const key_type& k) const
     {
-        if(root)
-            return IT(this, find_first(root, k));
-        else
-            return IT(this);
+        return IT(this, lower_bound(root, k));
     }
 
     template<class IT>
-    std::pair<IT, IT> equal_range(const key_type& k) const
+    IT _upper_bound(const key_type& k) const
     {
-        auto low = lower_bound<IT>(k);
+        return IT(this, upper_bound(root, k));
+    }
 
-        if(!low.n)
-            return {low, low};
-
-        auto up = ++upper_bound<IT>(k);
-
-        return {low, up};
+    template<class IT>
+    std::pair<IT, IT> _equal_range(const key_type& k) const
+    {
+        return {_lower_bound<IT>(k), _upper_bound<IT>(k)};
     }
 
 private:
@@ -1013,28 +1000,62 @@ void swap(typename interval_tree<K, T, C>::iterator& lhs,
     lhs.swap(rhs);
 }
 
-//template<class K, class T, class C>
-//bool operator==(const interval_tree<K, T, C>& lhs,
-//                const interval_tree<K, T, C>& rhs);
+template<class K, class T, class C>
+bool operator==(const interval_tree<K, T, C>& lhs,
+                const interval_tree<K, T, C>& rhs)
+{
+    if(lhs.size() != rhs.size())
+        return false;
 
-//template<class K, class T, class C>
-//bool operator!=(const interval_tree<K, T, C>& lhs,
-//                const interval_tree<K, T, C>& rhs);
+    auto lit = lhs.cbegin();
+    auto el  = lhs.cend();
 
-//template<class K, class T, class C>
-//bool operator <(const interval_tree<K, T, C>& lhs,
-//                const interval_tree<K, T, C>& rhs);
+    auto rit = rhs.cbegin();
+    auto er  = rhs.cend();
 
-//template<class K, class T, class C>
-//bool operator >(const interval_tree<K, T, C>& lhs,
-//                const interval_tree<K, T, C>& rhs);
+    while(lit != el && rit != er)
+    {
+        if(*lit != *rit)
+            return false;
+    }
 
-//template<class K, class T, class C>
-//bool operator<=(const interval_tree<K, T, C>& lhs,
-//                const interval_tree<K, T, C>& rhs);
+    return true;
+}
 
-//template<class K, class T, class C>
-//bool operator>=(const interval_tree<K, T, C>& lhs,
-//                const interval_tree<K, T, C>& rhs);
+template<class K, class T, class C>
+bool operator!=(const interval_tree<K, T, C>& lhs,
+                const interval_tree<K, T, C>& rhs)
+{
+    return !(lhs == rhs);
+}
+
+template<class K, class T, class C>
+bool operator <(const interval_tree<K, T, C>& lhs,
+                const interval_tree<K, T, C>& rhs)
+{
+    return std::lexicographical_compare(lhs.cbegin(), lhs.cend(),
+                                        rhs.cbegin(), rhs.cend());
+}
+
+template<class K, class T, class C>
+bool operator >(const interval_tree<K, T, C>& lhs,
+                const interval_tree<K, T, C>& rhs)
+{
+    return rhs < lhs;
+}
+
+template<class K, class T, class C>
+bool operator<=(const interval_tree<K, T, C>& lhs,
+                const interval_tree<K, T, C>& rhs)
+{
+    return !(lhs > rhs);
+}
+
+template<class K, class T, class C>
+bool operator>=(const interval_tree<K, T, C>& lhs,
+                const interval_tree<K, T, C>& rhs)
+{
+    return !(lhs < rhs);
+}
 
 #endif // INTERVAL_TREE_H

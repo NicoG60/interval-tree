@@ -2,11 +2,11 @@
 
 ```cpp
 interval_tree();
-explicit interval_tree(const Comp& comp);	            // (1)
+explicit interval_tree(const Comp& comp);	          // (1)
 //----------------------------------------------------------
 template<class InputIt>
-interval_tree(InputIt first, InputIt last,
-              const Comp& comp = Comp() );            // (2)
+interval_tree(InputIt first, InputIt last,            // (2)
+              const Comp& comp = Comp() );
 //----------------------------------------------------------
 interval_tree(const interval_tree& other);            // (3)
 //----------------------------------------------------------

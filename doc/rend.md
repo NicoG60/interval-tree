@@ -13,7 +13,3 @@ Returns a reverse iterator to the element following the last element of the reve
 #### Returns
 
 Reverse iterator to the element following the last element.
-
-#### Complexity
-
-Linear in size

@@ -24,5 +24,5 @@ Replace the content of the container
 #### Complexity
 
 1. Linear in size of `*this` and `other`
-2. *Linear in size of `*this` and `other`
+2. Linear in size of `*this`
 5. N log(N) where `N = size() + init.size()`

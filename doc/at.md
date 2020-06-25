@@ -1,28 +1,18 @@
 # interval_tree<Key, Value, Comp>::at
 
 ```cpp
-reference at( const key_type& key );               // (1)
-const_reference at( const key_type& key ) const;   // (2)
-//-----------------------------------------------------
-void at( const bount_type& point,
-         std::vector<value_type>& results ) const; // (3)
+void at( const Key& point, std::vector<iterator>& results );             // (1)
+//-----------------------------------------------------------------------------
+void at( const Key& point, std::vector<const_iterator>& results ); const // (2)
 ```
 
-1. 
-2. Returns a reference to the mapped value of the element with key equivalent to `key`. If no such element exists, an exception of type [std::out_of_range](https://en.cppreference.com/w/cpp/error/out_of_range) is thrown.
-3. Fill the given vector with all intervals that overlaps the given point.
+Fill the given results vector with all intervals that overlaps the given point.
+The results vector is not cleared before the function start and is filled using `push_back`. Better performance can be optained if the vector's capacity is large enough and allocation is not needed.
 
 #### Parameters
 
-- **key** : the key of the element to find
 - **point** : the point where to search for overlapping intervals
-- **& results** : a writable vector the function will fill.
-
-#### Returns
-
-1. 
-2. A reference to the mapped value.
-3. The filled vector.
+- **results** : a writable vector of interator or const_iterator which will be filled.
 
 #### Complexity
 
