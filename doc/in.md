@@ -21,4 +21,4 @@ This function will no clear the result vector and uses `push_back` to fill it. B
 
 #### Complexity
 
-Logarithmic in the size of the container
+Linear

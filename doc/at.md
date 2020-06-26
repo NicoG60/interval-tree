@@ -16,4 +16,4 @@ The results vector is not cleared before the function start and is filled using 
 
 #### Complexity
 
-Logarithmic in the size of the container
+Linear
