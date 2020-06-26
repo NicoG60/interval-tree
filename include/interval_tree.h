@@ -526,7 +526,9 @@ public:
 
     void swap(interval_tree& other) noexcept(std::is_nothrow_swappable<Compare>::value)
     {
-        std::swap(root, other.root);
+        std::swap(root,       other.root);
+        std::swap(node_count, other.node_count);
+        std::swap(comp,       other.comp);
     }
 
 
