@@ -36,7 +36,7 @@ jobs:
       if: runner.os != 'Windows'
       
     - name: test
-      run: ./interval_tree_test
+      run: make test
       working-directory: build
       if: runner.os != 'Windows'
       
@@ -51,6 +51,6 @@ jobs:
       if: runner.os == 'Windows'
       
     - name: test
-      run: .\interval_tree_test.exe
+      run: nmake.exe test
       working-directory: build
       if: runner.os == 'Windows'

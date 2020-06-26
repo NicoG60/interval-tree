@@ -68,7 +68,7 @@ public:
         {
             return less(lhs.first, rhs.first) || (eq(rhs.first, lhs.first) && less(lhs.second, rhs.second));
         }
-        inline bool less(const value_type& lhs, const value_type& rhs) const { return less(lhs.first, rhs.second); }
+        inline bool less(const value_type& lhs, const value_type& rhs) const { return less(lhs.first, rhs.first); }
 
         inline bool greater(const bound_type& lhs, const bound_type& rhs) const { return less(rhs, lhs); }
         inline bool greater(const key_type&   lhs, const key_type&   rhs) const { return less(rhs, lhs); }
@@ -206,6 +206,7 @@ public:
 
     public:
         const_iterator(const interval_tree* t, node* n = nullptr) : iterator(t, n) {}
+        const_iterator(const iterator& other) : iterator(other.tree, other.n) {}
         const_iterator() = default;
     };
 
@@ -227,6 +228,7 @@ public:
         friend class interval_tree;
     public:
         reverse_const_iterator(const interval_tree* t, node* n = nullptr) : const_iterator(t, n) {}
+        reverse_const_iterator(const reverse_iterator& other) : iterator(other.tree, other.n) {}
         reverse_const_iterator() = default;
 
         inline iterator& operator++()    { return iterator::operator--();  }
@@ -273,7 +275,7 @@ public:
         if(root)
             delete_node(root);
 
-        root = clone(copy.root);
+        root = copy.root ? clone(copy.root) : nullptr;
         node_count = copy.node_count;
         comp = copy.comp;
 
@@ -368,7 +370,7 @@ public:
     // ====== CAPACITY =========================================================
     bool empty() const noexcept
     {
-        return node_count = 0;
+        return node_count == 0;
     }
 
     size_type size() const noexcept
@@ -460,14 +462,15 @@ public:
     template<class... Args>
     iterator emplace_hint(const_iterator hint, Args&& ...args)
     {
-        node* h = hint.n;
-
-        if(!h || !h->parent)
-            return emplace(std::forward<Args>(args)...);
-
         node* n = new node(std::forward<Args>(args)...);
 
-        insert(h->parent, n);
+        if(root)
+            insert(hint, n);
+        else
+        {
+            node_count ++;
+            root = n;
+        }
 
         return iterator(this, n);
     }
@@ -610,7 +613,7 @@ public:
 
 
     // ====== OBSERVER =========================================================
-    key_compare   key_comp() const
+    key_compare key_comp() const
     {
         return comp;
     }
@@ -637,10 +640,11 @@ private:
 
     node* clone(node* n, node* p = nullptr) const
     {
-        node* nn = new node(n->data);
-        nn->parent = p;
-        nn->max = n->max;
-        nn->height = n->height;
+        node* nn    = new node(n->data);
+        nn->parent  = p;
+        nn->max     = n->max;
+        nn->height  = n->height;
+        nn->bfactor = n->bfactor;
 
         if(n->left)
             nn->left = clone(n->left, nn);
@@ -837,8 +841,26 @@ private:
         return r;
     }
 
-    node* find_last(node* n, const key_type& k) const
+    node* find_leaf_low(const key_type& k) const
     {
+        node* n = root;
+        node* r = n;
+
+        while(n)
+        {
+            r = n;
+            if(comp(n->key(), k))
+                n = n->right;
+            else
+                n = n->left;
+        }
+
+        return r;
+    }
+
+    node* find_leaf_high(const key_type& k) const
+    {
+        node* n = root;
         node* r = n;
 
         while(n)
@@ -851,6 +873,25 @@ private:
         }
 
         return r;
+    }
+
+    node* find_leaf(const_iterator h, const key_type& k) const
+    {
+        if(h == end() || !comp(h.n->key(), k))
+        {
+            const_iterator prior = h;
+            if(prior == begin() || !comp(k, (--prior).n->key()))
+            {
+                if(!h.n->left)
+                    return h.n;
+                else
+                    return prior.n;
+            }
+
+            return find_leaf_high(k);
+        }
+
+        return find_leaf_low(k);
     }
 
     template<class IT>
@@ -869,8 +910,20 @@ private:
 
     void insert(node* n)
     {
-        node* p = find_last(root, n->key());
+        node* p = find_leaf_high(n->key());
 
+        insert(n, p);
+    }
+
+    void insert(const_iterator hint, node* n)
+    {
+        node* p = find_leaf(hint, n->key());
+
+        insert(n, p);
+    }
+
+    void insert(node* n, node* p)
+    {
         n->parent = p;
 
         if(comp.less(n->key(), p->key()))
@@ -881,8 +934,6 @@ private:
         update_props(n);
 
         rebalance(p);
-
-        root = find_root(n);
 
         node_count++;
     }
@@ -906,7 +957,6 @@ private:
         {
             update_props(v);
             rebalance(v);
-            root = find_root(v);
         }
         else if(node_count == 0)
             root = nullptr;

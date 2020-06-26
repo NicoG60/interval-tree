@@ -3,71 +3,68 @@
 #include <catch2/catch.hpp>
 #include <random>
 #include <chrono>
+#include <algorithm>
 
 #include <interval_tree.h>
 
-TEST_CASE("Constructors and assignment")
+typedef interval_tree<int, std::string> itree;
+typedef itree::value_type               value_type;
+typedef itree::key_type                 key_type;
+typedef itree::iterator                 iterator;
+
+TEST_CASE("Constructors and assignment", "[test]")
 {
     SECTION("Default Constructor")
     {
-        interval_tree<int, std::string> tree;
+        itree tree;
+        REQUIRE(tree.empty());
         REQUIRE(tree.size() == 0);
+        REQUIRE(tree.begin() == tree.end());
     }
 
     SECTION("Initializer list Constructor")
     {
-        interval_tree<int, std::string> tree{{{0, 1}, "value0"}};
+        itree tree{{{0, 1}, "value0"}};
+        REQUIRE_FALSE(tree.empty());
         REQUIRE(tree.size() == 1);
+        auto it = tree.begin();
+        REQUIRE(it != tree.end());
+        REQUIRE(it->first.first  == 0);
+        REQUIRE(it->first.second == 1);
+        REQUIRE(it->second == "value0");
     }
 
     SECTION("Copy constructor")
     {
-        interval_tree<int, std::string> tree{{{0, 1}, "value0"}};
-        interval_tree<int, std::string> copy(tree);
-
-        REQUIRE(*copy.begin() == *tree.begin());
-    }
-
-    SECTION("Copy assignment")
-    {
-        interval_tree<int, std::string> tree{{{0, 1}, "value0"}};
-        interval_tree<int, std::string> copy;
-        copy = tree;
+        itree tree{{{0, 1}, "value0"}};
+        itree copy(tree);
 
         REQUIRE(*copy.begin() == *tree.begin());
     }
 
     SECTION("Move constructor")
     {
-        interval_tree<int, std::string> tree(interval_tree<int, std::string>{{{0, 1}, "value0"}});
+        itree tree(itree{{{0, 1}, "value0"}});
 
         auto it = tree.begin();
 
-        REQUIRE(it->first == std::pair<int, int>(0, 1));
-        REQUIRE(it->second == "value0");
-    }
-
-    SECTION("Move assignment")
-    {
-        interval_tree<int, std::string> tree = {{{0, 1}, "value0"}};
-
-        auto it = tree.begin();
-
-        REQUIRE(it->first == std::pair<int, int>(0, 1));
+        REQUIRE(it->first == key_type(0, 1));
         REQUIRE(it->second == "value0");
     }
 }
 
-TEST_CASE("Insertion")
+TEST_CASE("Insertion", "[test]")
 {
-    interval_tree<int, std::string> tree;
+    itree tree;
+    REQUIRE(tree.empty());
 
     SECTION("Insert 1")
     {
         auto it = tree.insert({{0, 1}, "value0"});
 
+        REQUIRE(std::is_sorted(tree.begin(), tree.end(), tree.value_comp()));
         REQUIRE(it == tree.begin());
-        REQUIRE(it->first == std::pair<int, int>(0, 1));
+        REQUIRE(it->first == key_type(0, 1));
         REQUIRE(it->second == "value0");
         REQUIRE(tree.size() == 1);
         REQUIRE(++it == tree.end());
@@ -79,12 +76,13 @@ TEST_CASE("Insertion")
         auto it0 = tree.insert({{-2, 0}, "value0"});
         auto it2 = tree.insert({{0, 2}, "value2"});
 
+        REQUIRE(std::is_sorted(tree.begin(), tree.end(), tree.value_comp()));
         REQUIRE(it0 == tree.begin());
-        REQUIRE(it0->first == std::pair<int, int>(-2, 0));
+        REQUIRE(it0->first == key_type(-2, 0));
         REQUIRE(it0->second == "value0");
-        REQUIRE(it1->first == std::pair<int, int>(-1, 1));
+        REQUIRE(it1->first == key_type(-1, 1));
         REQUIRE(it1->second == "value1");
-        REQUIRE(it2->first == std::pair<int, int>(0, 2));
+        REQUIRE(it2->first == key_type(0, 2));
         REQUIRE(it2->second == "value2");
         REQUIRE(tree.size() == 3);
         REQUIRE(++it0 == it1);
@@ -98,12 +96,13 @@ TEST_CASE("Insertion")
         auto it1 = tree.insert({{-1, 1}, "value1"});
         auto it0 = tree.insert({{-2, 0}, "value0"});
 
+        REQUIRE(std::is_sorted(tree.begin(), tree.end(), tree.value_comp()));
         REQUIRE(it0 == tree.begin());
-        REQUIRE(it0->first == std::pair<int, int>(-2, 0));
+        REQUIRE(it0->first == key_type(-2, 0));
         REQUIRE(it0->second == "value0");
-        REQUIRE(it1->first == std::pair<int, int>(-1, 1));
+        REQUIRE(it1->first == key_type(-1, 1));
         REQUIRE(it1->second == "value1");
-        REQUIRE(it2->first == std::pair<int, int>(0, 2));
+        REQUIRE(it2->first == key_type(0, 2));
         REQUIRE(it2->second == "value2");
         REQUIRE(tree.size() == 3);
         REQUIRE(++it0 == it1);
@@ -117,12 +116,13 @@ TEST_CASE("Insertion")
         auto it0 = tree.insert({{-2, 0}, "value0"});
         auto it1 = tree.insert({{-1, 1}, "value1"});
 
+        REQUIRE(std::is_sorted(tree.begin(), tree.end(), tree.value_comp()));
         REQUIRE(it0 == tree.begin());
-        REQUIRE(it0->first == std::pair<int, int>(-2, 0));
+        REQUIRE(it0->first == key_type(-2, 0));
         REQUIRE(it0->second == "value0");
-        REQUIRE(it1->first == std::pair<int, int>(-1, 1));
+        REQUIRE(it1->first == key_type(-1, 1));
         REQUIRE(it1->second == "value1");
-        REQUIRE(it2->first == std::pair<int, int>(0, 2));
+        REQUIRE(it2->first == key_type(0, 2));
         REQUIRE(it2->second == "value2");
         REQUIRE(tree.size() == 3);
         REQUIRE(++it0 == it1);
@@ -136,12 +136,13 @@ TEST_CASE("Insertion")
         auto it1 = tree.insert({{-1, 1}, "value1"});
         auto it2 = tree.insert({{0, 2}, "value2"});
 
+        REQUIRE(std::is_sorted(tree.begin(), tree.end(), tree.value_comp()));
         REQUIRE(it0 == tree.begin());
-        REQUIRE(it0->first == std::pair<int, int>(-2, 0));
+        REQUIRE(it0->first == key_type(-2, 0));
         REQUIRE(it0->second == "value0");
-        REQUIRE(it1->first == std::pair<int, int>(-1, 1));
+        REQUIRE(it1->first == key_type(-1, 1));
         REQUIRE(it1->second == "value1");
-        REQUIRE(it2->first == std::pair<int, int>(0, 2));
+        REQUIRE(it2->first == key_type(0, 2));
         REQUIRE(it2->second == "value2");
         REQUIRE(tree.size() == 3);
         REQUIRE(++it0 == it1);
@@ -155,12 +156,13 @@ TEST_CASE("Insertion")
         auto it2 = tree.insert({{0, 2}, "value2"});
         auto it1 = tree.insert({{-1, 1}, "value1"});
 
+        REQUIRE(std::is_sorted(tree.begin(), tree.end(), tree.value_comp()));
         REQUIRE(it0 == tree.begin());
-        REQUIRE(it0->first == std::pair<int, int>(-2, 0));
+        REQUIRE(it0->first == key_type(-2, 0));
         REQUIRE(it0->second == "value0");
-        REQUIRE(it1->first == std::pair<int, int>(-1, 1));
+        REQUIRE(it1->first == key_type(-1, 1));
         REQUIRE(it1->second == "value1");
-        REQUIRE(it2->first == std::pair<int, int>(0, 2));
+        REQUIRE(it2->first == key_type(0, 2));
         REQUIRE(it2->second == "value2");
         REQUIRE(tree.size() == 3);
         REQUIRE(++it0 == it1);
@@ -170,16 +172,17 @@ TEST_CASE("Insertion")
 
     SECTION("Emplace 3 RL")
     {
-        auto it0 = tree.emplace(std::pair<int, int>{-2, 0}, "value0");
-        auto it2 = tree.emplace(std::pair<int, int>{0, 2}, "value2");
-        auto it1 = tree.emplace(std::pair<int, int>{-1, 1}, "value1");
+        auto it0 = tree.emplace(key_type{-2, 0}, "value0");
+        auto it2 = tree.emplace(key_type{0, 2}, "value2");
+        auto it1 = tree.emplace(key_type{-1, 1}, "value1");
 
+        REQUIRE(std::is_sorted(tree.begin(), tree.end(), tree.value_comp()));
         REQUIRE(it0 == tree.begin());
-        REQUIRE(it0->first == std::pair<int, int>(-2, 0));
+        REQUIRE(it0->first == key_type(-2, 0));
         REQUIRE(it0->second == "value0");
-        REQUIRE(it1->first == std::pair<int, int>(-1, 1));
+        REQUIRE(it1->first == key_type(-1, 1));
         REQUIRE(it1->second == "value1");
-        REQUIRE(it2->first == std::pair<int, int>(0, 2));
+        REQUIRE(it2->first == key_type(0, 2));
         REQUIRE(it2->second == "value2");
         REQUIRE(tree.size() == 3);
         REQUIRE(++it0 == it1);
@@ -188,9 +191,150 @@ TEST_CASE("Insertion")
     }
 }
 
-TEST_CASE("Deletion")
+TEST_CASE("Insert overloads", "[test]")
 {
-    interval_tree<int, std::string> tree{
+    itree tree{
+        {{0, 1}, "value0"},
+        {{1, 2}, "value1"},
+        {{2, 3}, "value2"},
+        //{{3, 4}, "value3"}, // this is the one we'll insert
+        {{4, 5}, "value4"},
+        {{5, 6}, "value5"},
+        {{6, 7}, "value6"}
+    };
+
+    SECTION("Insert copy")
+    {
+        value_type v{{3, 4}, "value3"};
+
+        auto it = tree.insert(v);
+
+        REQUIRE(std::is_sorted(tree.begin(), tree.end(), tree.value_comp()));
+        REQUIRE(it->first == v.first);
+        REQUIRE(it->second == v.second);
+        --it;
+        REQUIRE(it->first == key_type(2, 3));
+        REQUIRE(it->second == "value2");
+        ++it;
+        ++it;
+        REQUIRE(it->first == key_type(4, 5));
+        REQUIRE(it->second == "value4");
+    }
+
+    SECTION("Insert move")
+    {
+        auto it = tree.insert(value_type{{3, 4}, "value3"});
+
+        REQUIRE(std::is_sorted(tree.begin(), tree.end(), tree.value_comp()));
+        REQUIRE(it->first == key_type(3, 4));
+        REQUIRE(it->second == "value3");
+        --it;
+        REQUIRE(it->first == key_type(2, 3));
+        REQUIRE(it->second == "value2");
+        ++it;
+        ++it;
+        REQUIRE(it->first == key_type(4, 5));
+        REQUIRE(it->second == "value4");
+    }
+
+    SECTION("Insert hint")
+    {
+        value_type v{{3, 4}, "value3"};
+
+        auto it = tree.begin();
+        ++it;
+        ++it;
+
+        it = tree.insert(it, v);
+
+        REQUIRE(it->first == v.first);
+        REQUIRE(it->second == v.second);
+        --it;
+        REQUIRE(it->first == std::pair<int, int>(2, 3));
+        REQUIRE(it->second == "value2");
+        ++it;
+        ++it;
+        REQUIRE(it->first == std::pair<int, int>(4, 5));
+        REQUIRE(it->second == "value4");
+    }
+
+    SECTION("Insert iterators")
+    {
+        itree tree2(tree);
+
+        tree.insert(tree2.begin(), tree2.end());
+
+        REQUIRE(std::is_sorted(tree.begin(), tree.end(), tree.value_comp()));
+    }
+
+    SECTION("Insert ilist")
+    {
+        tree.insert({
+                        {{0, 1}, "value0"},
+                        {{1, 2}, "value1"},
+                        {{2, 3}, "value2"},
+                        {{4, 5}, "value4"},
+                        {{5, 6}, "value5"},
+                        {{6, 7}, "value6"}
+                    });
+
+        REQUIRE(std::is_sorted(tree.begin(), tree.end(), tree.value_comp()));
+    }
+}
+
+TEST_CASE("Emplaces overloads", "[test]")
+{
+    itree tree{
+        {{0, 1}, "value0"},
+        {{1, 2}, "value1"},
+        {{2, 3}, "value2"},
+        //{{3, 4}, "value3"}, // this is the one we'll insert
+        {{4, 5}, "value4"},
+        {{5, 6}, "value5"},
+        {{6, 7}, "value6"}
+    };
+
+    SECTION("Emplace")
+    {
+        auto it = tree.emplace(key_type{3, 4}, "value3");
+
+        REQUIRE(std::is_sorted(tree.begin(), tree.end(), tree.value_comp()));
+        REQUIRE(it->first == key_type(3, 4));
+        REQUIRE(it->second == "value3");
+        --it;
+        REQUIRE(it->first == key_type(2, 3));
+        REQUIRE(it->second == "value2");
+        ++it;
+        ++it;
+        REQUIRE(it->first == key_type(4, 5));
+        REQUIRE(it->second == "value4");
+    }
+
+    SECTION("Emplace hint")
+    {
+        value_type v{{3, 4}, "value3"};
+
+        auto it = tree.begin();
+        ++it;
+        ++it;
+
+        it = tree.emplace_hint(it, key_type{3, 4}, "value3");
+
+        REQUIRE(it->first == key_type(3, 4));
+        REQUIRE(it->second == "value3");
+        --it;
+        REQUIRE(it->first == std::pair<int, int>(2, 3));
+        REQUIRE(it->second == "value2");
+        ++it;
+        ++it;
+        REQUIRE(it->first == std::pair<int, int>(4, 5));
+        REQUIRE(it->second == "value4");
+    }
+}
+
+TEST_CASE("Deletion", "[test]")
+{
+    itree tree{
         {{0, 1}, "value0"},
         {{1, 2}, "value1"},
         {{2, 3}, "value2"},
@@ -200,24 +344,27 @@ TEST_CASE("Deletion")
         {{6, 7}, "value6"}
     };
 
+    REQUIRE(tree.size() == 7);
+    REQUIRE(std::is_sorted(tree.begin(), tree.end(), tree.value_comp()));
+
     SECTION("Delete leaf")
     {
         auto it = tree.erase(tree.begin());
 
+        REQUIRE(std::is_sorted(tree.begin(), tree.end(), tree.value_comp()));
         REQUIRE(tree.size() == 6);
-        REQUIRE(it->first == std::pair<int, int>(1, 2));
+        REQUIRE(it->first == key_type(1, 2));
         REQUIRE(it->second == "value1");
-
     }
 
     SECTION("Delete middle")
     {
         auto it = tree.erase(++tree.begin());
 
+        REQUIRE(std::is_sorted(tree.begin(), tree.end(), tree.value_comp()));
         REQUIRE(tree.size() == 6);
-        REQUIRE(it->first == std::pair<int, int>(2, 3));
+        REQUIRE(it->first == key_type(2, 3));
         REQUIRE(it->second == "value2");
-
     }
 
     SECTION("Delete root")
@@ -227,54 +374,42 @@ TEST_CASE("Deletion")
         it++;
         it = tree.erase(it);
 
+        REQUIRE(std::is_sorted(tree.begin(), tree.end(), tree.value_comp()));
         REQUIRE(tree.size() == 6);
-        REQUIRE(it->first == std::pair<int, int>(4, 5));
+        REQUIRE(it->first == key_type(4, 5));
         REQUIRE(it->second == "value4");
+    }
 
+    SECTION("Clear")
+    {
+        tree.clear();
+
+        REQUIRE(tree.empty());
+        REQUIRE(tree.begin() == tree.end());
     }
 }
 
-TEST_CASE("Ordering")
+TEST_CASE("Ordering", "[test]")
 {
-    interval_tree<int, int> tree;
+    itree tree;
 
     std::srand(0); // Always the same seed. It's just to fill the container
 
     for(std::size_t i = 0; i < 100; i++)
-        tree.emplace(std::pair<int, int>{std::rand(), std::rand()}, i);
+        tree.emplace(key_type{std::rand(), std::rand()}, std::to_string(i));
 
 
     SECTION("Base")
     {
-        auto k = tree.begin()->first;
-        auto s = tree.size();
-
-        for(auto& p : tree)
-        {
-            REQUIRE(k <= p.first);
-            k = p.first;
-            s--;
-        }
-
-        REQUIRE(s == 0);
+        REQUIRE(std::is_sorted(tree.begin(), tree.end(), tree.value_comp()));
     }
 
     SECTION("With insert")
     {
         for(std::size_t i = 0; i < 10; i++)
-            tree.emplace(std::pair<int, int>{std::rand(), std::rand()}, i);
+            tree.emplace(key_type{std::rand(), std::rand()}, std::to_string(i));
 
-        auto k = tree.begin()->first;
-        auto s = tree.size();
-
-        for(auto& p : tree)
-        {
-            REQUIRE(k <= p.first);
-            k = p.first;
-            s--;
-        }
-
-        REQUIRE(s == 0);
+        REQUIRE(std::is_sorted(tree.begin(), tree.end(), tree.value_comp()));
     }
 
     SECTION("With deletes")
@@ -288,51 +423,32 @@ TEST_CASE("Ordering")
             tree.erase(it);
         }
 
-        auto k = tree.begin()->first;
-        auto s = tree.size();
-
-        for(auto& p : tree)
-        {
-            REQUIRE(k <= p.first);
-            k = p.first;
-            s--;
-        }
-
-        REQUIRE(s == 0);
+        REQUIRE(std::is_sorted(tree.begin(), tree.end(), tree.value_comp()));
     }
 
     SECTION("reverse Base")
     {
-        auto k = tree.rbegin()->first;
-        auto s = tree.size();
+        auto comp = tree.value_comp();
 
-        for(auto it = tree.rbegin(); it != tree.rend(); it++)
+        REQUIRE(std::is_sorted(tree.rbegin(), tree.rend(),
+        [&](const value_type& a, const value_type& b)
         {
-            auto o = it->first;
-            REQUIRE(k >= o);
-            k = o;
-            s--;
-        }
-
-        REQUIRE(s == 0);
+            return !comp(a, b);
+        }));
     }
 
     SECTION("reverse With insert")
     {
         for(std::size_t i = 0; i < 10; i++)
-            tree.emplace(std::pair<int, int>{std::rand(), std::rand()}, i);
+            tree.emplace(key_type{std::rand(), std::rand()}, std::to_string(i));
 
-        auto k = tree.rbegin()->first;
-        auto s = tree.size();
+        auto comp = tree.value_comp();
 
-        for(auto it = tree.rbegin(); it != tree.rend(); it++)
+        REQUIRE(std::is_sorted(tree.rbegin(), tree.rend(),
+        [&](const value_type& a, const value_type& b)
         {
-            REQUIRE(k >= it->first);
-            k = it->first;
-            s--;
-        }
-
-        REQUIRE(s == 0);
+            return !comp(a, b);
+        }));
     }
 
     SECTION("reverse With deletes")
@@ -346,34 +462,50 @@ TEST_CASE("Ordering")
             tree.erase(it);
         }
 
-        auto k = tree.rbegin()->first;
-        auto s = tree.size();
+        auto comp = tree.value_comp();
 
-        for(auto it = tree.rbegin(); it != tree.rend(); it++)
+        REQUIRE(std::is_sorted(tree.rbegin(), tree.rend(),
+        [&](const value_type& a, const value_type& b)
         {
-            REQUIRE(k >= it->first);
-            k = it->first;
-            s--;
-        }
-
-        REQUIRE(s == 0);
+            return !comp(a, b);
+        }));
     }
 }
 
-TEST_CASE("Find point")
+TEST_CASE("Swap", "[test]")
 {
-    interval_tree<int, int> tree;
+    itree tree{
+        {{0, 1}, "value0"},
+        {{1, 2}, "value1"},
+        {{2, 3}, "value2"},
+        {{3, 4}, "value3"},
+        {{4, 5}, "value4"},
+        {{5, 6}, "value5"},
+        {{6, 7}, "value6"}
+    };
+
+    itree tree2;
+
+    tree.swap(tree2);
+
+    REQUIRE(tree.empty());
+    REQUIRE(tree2.size() == 7);
+}
+
+TEST_CASE("Find point", "[test]")
+{
+    itree tree;
 
     std::srand(0); // Always the same seed. It's just to fill the container
 
     for(int i = 0; i < 10000; i++)
-        tree.emplace(std::pair<int, int>{std::rand()%1000, std::rand()%1000}, i);
+        tree.emplace(std::pair<int, int>{std::rand()%1000, std::rand()%1000}, std::to_string(i));
 
     int point = 250; // Let's get all events at 250;
 
     // Get the point naivly;
 
-    std::vector<interval_tree<int, int>::value_type> naive;
+    std::vector<value_type> naive;
 
     for(auto& v : tree)
     {
@@ -385,7 +517,7 @@ TEST_CASE("Find point")
 
     REQUIRE(!naive.empty());
 
-    std::vector<interval_tree<int, int>::iterator> find;
+    std::vector<iterator> find;
 
     tree.at(point, find);
 
@@ -400,23 +532,31 @@ TEST_CASE("Find point")
         ++bf;
         ++bn;
     }
+
+    auto comp = tree.value_comp();
+
+    REQUIRE(std::is_sorted(find.begin(), find.end(),
+    [&](const iterator& a, const iterator& b)
+    {
+        return comp(*a, *b);
+    }));
 }
 
-TEST_CASE("Find interval")
+TEST_CASE("Find interval", "[test]")
 {
-    interval_tree<int, int> tree;
+    itree tree;
 
     std::srand(0); // Always the same seed. It's just to fill the container
 
     for(std::size_t i = 0; i < 100; i++)
-        tree.emplace(std::pair<int, int>{std::rand()%1000, std::rand()%1000}, i);
+        tree.emplace(key_type{std::rand()%1000, std::rand()%1000}, std::to_string(i));
 
     int low = 250;
     int high = 750; // Let's get all events in [250, 750];
 
-    // Get the point naivly;
+    // Get the point naively;
 
-    std::vector<interval_tree<int, int>::value_type> naive;
+    std::vector<value_type> naive;
 
     for(auto& v : tree)
     {
@@ -428,7 +568,7 @@ TEST_CASE("Find interval")
 
     REQUIRE(!naive.empty());
 
-    std::vector<interval_tree<int, int>::iterator> find;
+    std::vector<iterator> find;
 
     tree.in(low, high, find);
 
@@ -443,194 +583,152 @@ TEST_CASE("Find interval")
         ++bf;
         ++bn;
     }
+
+    auto comp = tree.value_comp();
+
+    REQUIRE(std::is_sorted(find.begin(), find.end(),
+    [&](const iterator& a, const iterator& b)
+    {
+        return comp(*a, *b);
+    }));
 }
 
-class Chrono
+void fill(itree& tree, int s)
 {
-public:
-    typedef std::chrono::high_resolution_clock       clock;
-    typedef clock::time_point                        time_point;
-    typedef std::chrono::duration<double, std::micro> duration;
-
-public:
-    Chrono() : tp(now()) {}
-
-    void start() { tp = now(); }
-
-    static time_point now() { return clock::now(); }
-
-    duration ellapsed() { return now() - tp; }
-
-private:
-    time_point tp;
-};
-
-void stats(const std::vector<Chrono::duration>& v, double& mean, double& stddev)
-{
-    mean = std::accumulate(v.begin(), v.end(), 0,
-    [](const double& a, const Chrono::duration& b)
-    {
-        return a + b.count();
-    });
-
-    mean /= v.size();
-
-    stddev = std::accumulate(v.begin(), v.end(), 0,
-    [=](const double& a, const Chrono::duration& b)
-    {
-        const double c = (b.count() - mean);
-        return a + (c * c);
-    });
-
-    stddev = std::sqrt(stddev/v.size());
+    for(int i = 0; i < s; i++)
+        tree.emplace(key_type{std::rand()%1000, std::rand()%1000}, std::to_string(i));
 }
 
-TEST_CASE("Benchmark")
+int generate_size()
 {
-    interval_tree<int, int> tree;
-
-    std::srand(0); // Always the same seed. It's just to fill the container
-
-    for(int i = 0; i < 100000; i++)
-        tree.emplace(std::pair<int, int>{std::rand()%1000, std::rand()%1000}, i);
-
-    REQUIRE(tree.size() == 100000);
-
-    Chrono timer;
-    Chrono total;
-    std::vector<Chrono::duration> v(100);
-    double mean;
-    double stddev;
-
-    total.start();
-    for(int i = 0; i < 100; i++)
-    {
-        std::size_t before = tree.size();
-        timer.start();
-        tree.emplace(std::pair<int, int>{std::rand()%1000, std::rand()%1000}, 101);
-        v[i] = timer.ellapsed();
-
-        REQUIRE(tree.size() == before+1);
-    }
-
-    std::cout << "Emplace 100 items. total: " << total.ellapsed().count() << "us" << std::endl;
-    stats(v, mean, stddev);
-    std::cout << " -> Mean: " << mean << "us, StdDev: " << stddev << "us" << std::endl;
-
-    total.start();
-    for(int i = 0; i < 100; i++)
-    {
-        std::size_t before = tree.size();
-        timer.start();
-        tree.insert({{std::rand()%1000, std::rand()%1000}, 102});
-        v[i] = timer.ellapsed();
-        REQUIRE(tree.size() == before+1);
-    }
-
-    std::cout << "Insert 100 items. total: " << total.ellapsed().count() << "us" << std::endl;
-    stats(v, mean, stddev);
-    std::cout << " -> Mean: " << mean << "us, StdDev: " << stddev << "us" << std::endl;
-
-    std::vector<interval_tree<int, int>::iterator> find;
-    find.reserve(1000);
-
-    total.start();
-    for(int i = 0; i < 100; i++)
-    {
-        std::size_t before = tree.size();
-        find.clear();
-        timer.start();
-        tree.at(std::rand()%1000, find);
-        v[i] = timer.ellapsed();
-        REQUIRE(tree.size() == before);
-    }
-
-    std::cout << "Find 100 times points. total: " << total.ellapsed().count() << "us" << std::endl;
-    stats(v, mean, stddev);
-    std::cout << " -> Mean: " << mean << "us, StdDev: " << stddev << "us" << std::endl;
-
-    total.start();
-    for(int i = 0; i < 100; i++)
-    {
-        std::size_t before = tree.size();
-        find.clear();
-        timer.start();
-        tree.in(std::rand()%1000, std::rand()%1000, find);
-        v[i] = timer.ellapsed();
-        REQUIRE(tree.size() == before);
-    }
-
-    std::cout << "Find 100 times interval. total: " << total.ellapsed().count() << "us" << std::endl;
-    stats(v, mean, stddev);
-    std::cout << " -> Mean: " << mean << "us, StdDev: " << stddev << "us" << std::endl;
-
-    REQUIRE(find.size() > 100);
-
-    total.start();
-    for(int i = 0; i < 100; i++)
-    {
-        std::size_t before = tree.size();
-        timer.start();
-        tree.erase(find[i]);
-        v[i] = timer.ellapsed();
-        REQUIRE(tree.size() == before-1);
-    }
-
-    std::cout << "erase 100 random. total: " << total.ellapsed().count() << "us" << std::endl;
-    stats(v, mean, stddev);
-    std::cout << " -> Mean: " << mean << "us, StdDev: " << stddev << "us" << std::endl;
-
-    total.start();
-    for(int i = 0; i < 100; i++)
-    {
-        std::size_t before = tree.size();
-        timer.start();
-        tree.erase(tree.begin());
-        v[i] = timer.ellapsed();
-        REQUIRE(tree.size() == before-1);
-    }
-
-    std::cout << "erase 100 begin. total: " << total.ellapsed().count() << "us" << std::endl;
-    stats(v, mean, stddev);
-    std::cout << " -> Mean: " << mean << "us, StdDev: " << stddev << "us" << std::endl;
+    return GENERATE(0, 1,     2,     5,     7,
+                       10,    25,    50,    75,
+                       100,   250,   500,   750,
+                       1000,  2500,  5000,  7500,
+                       10000, 25000, 50000, 75000,
+                       100000);
 }
 
- TEST_CASE("Benchmark 2")
- {
-     interval_tree<int, int> tree;
+TEST_CASE("Benchmarks Copy", "[benchmark]")
+{
+    int size = generate_size();
 
-     std::srand(0); // Always the same seed. It's just to fill the container
+    BENCHMARK_ADVANCED("Copy " + std::to_string(size))(Catch::Benchmark::Chronometer meter)
+    {
+        itree tree;
+        fill(tree, size);
 
-     for(int i = 0; i < 100000; i++)
-         tree.emplace(std::pair<int, int>{std::rand()%1000, std::rand()%1000}, i);
+        meter.measure([&]()
+        {
+            itree tree2 = tree;
+            return tree2;
+        });
+    };
+}
 
-     std::vector<interval_tree<int, int>::iterator> find;
+TEST_CASE("Benchmarks Emplace", "[benchmark]")
+{
+    int size = generate_size();
 
-     BENCHMARK("Emplace")
-     {
-         return tree.emplace(std::pair<int, int>{std::rand()%1000, std::rand()%1000}, 101);
-     };
+    BENCHMARK_ADVANCED("Emplace " + std::to_string(size))(Catch::Benchmark::Chronometer meter)
+    {
+        itree tree;
+        fill(tree, size);
 
-     BENCHMARK("Insert")
-     {
-         return tree.insert({{std::rand()%1000, std::rand()%1000}, 101});
-     };
+        meter.measure([&](int i)
+        {
+            return tree.emplace(key_type{std::rand()%1000, std::rand()%1000}, std::to_string(i));
+        });
+    };
+}
 
-     BENCHMARK_ADVANCED("Find point")(Catch::Benchmark::Chronometer meter)
-     {
-         find.clear();
-         meter.measure([&](){ tree.at(std::rand()%1000, find); return &find; });
-     };
+TEST_CASE("Benchmarks Insert", "[benchmark]")
+{
+    int size = generate_size();
 
-     BENCHMARK_ADVANCED("Find interval")(Catch::Benchmark::Chronometer meter)
-     {
-         find.clear();
-         meter.measure([&](){ tree.in(std::rand()%1000, std::rand()%1000, find); return &find; });
-     };
+    BENCHMARK_ADVANCED("Insert " + std::to_string(size))(Catch::Benchmark::Chronometer meter)
+    {
+        itree tree;
+        fill(tree, size);
 
-     BENCHMARK("Erase")
-     {
-         return tree.erase(tree.begin());
-     };
+        meter.measure([&](int i)
+        {
+            return tree.insert({{std::rand()%1000, std::rand()%1000}, std::to_string(i)});
+        });
+    };
+}
 
- }
+TEST_CASE("Benchmarks Find Point", "[benchmark]")
+{
+    int size = generate_size();
+
+    BENCHMARK_ADVANCED("Find point " + std::to_string(size))(Catch::Benchmark::Chronometer meter)
+    {
+        itree tree;
+        fill(tree, size);
+
+        std::vector<iterator> find;
+        find.reserve(size/10);
+
+        meter.measure([&](){ tree.at(std::rand()%1000, find); return &find; });
+    };
+}
+
+TEST_CASE("Benchmarks Find Interval", "[benchmark]")
+{
+    int size = generate_size();
+
+
+    BENCHMARK_ADVANCED("Find interval " + std::to_string(size))(Catch::Benchmark::Chronometer meter)
+    {
+        itree tree;
+        fill(tree, size);
+
+        std::vector<iterator> find;
+        find.reserve(size/10);
+
+        meter.measure([&](){ tree.in(std::rand()%1000, std::rand()%1000, find); return &find; });
+    };
+}
+
+TEST_CASE("Benchmarks Erase begin", "[benchmark]")
+{
+    int size = generate_size();
+
+    BENCHMARK_ADVANCED("Erase Begin " + std::to_string(size))(Catch::Benchmark::Chronometer meter)
+    {
+        itree tree;
+        fill(tree, std::max(size, meter.runs()));
+
+        meter.measure([&]()
+        {
+            return tree.erase(tree.begin());
+        });
+    };
+}
+
+TEST_CASE("Benchmarks Erase middle", "[benchmark]")
+{
+    int size = generate_size();
+
+    BENCHMARK_ADVANCED("Erase middle " + std::to_string(size))(Catch::Benchmark::Chronometer meter)
+    {
+        itree tree;
+        fill(tree, std::max(size, meter.runs()));
+
+        int m = tree.size() / 2;
+
+        auto it = tree.begin();
+
+        for(int i = 0; i < m; i++)
+            ++it;
+
+        meter.measure([&]()
+        {
+            it = tree.erase(it);
+            if(tree.size() > 2 && tree.size()%2 == 1)
+                --it;
+            return it;
+        });
+    };
+}
