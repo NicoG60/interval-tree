@@ -12,10 +12,38 @@ typedef itree::value_type               value_type;
 typedef itree::key_type                 key_type;
 typedef itree::iterator                 iterator;
 
-void fill(itree& tree, int s)
+key_type get_random_key(int max)
+{
+    key_type k(std::rand()%max, std::rand()%max);
+
+    if(k.second < k.first)
+        std::swap(k.first, k.second);
+
+    return k;
+}
+
+void fill(itree& tree, int s, int max)
 {
     for(int i = 0; i < s; i++)
-        tree.emplace(key_type{std::rand()%1000, std::rand()%1000}, std::to_string(i));
+        tree.emplace(get_random_key(max), std::to_string(i));
+}
+
+void fill_less_random(itree& tree, std::size_t s, int max)
+{
+    int i = 0;
+
+    while(tree.size() != s)
+    {
+        key_type k;
+        k.first = i;
+        i += std::rand()%10+1;
+        k.second = i;
+        i += std::rand()%10+1;
+        if(i >= max)
+            i -= max;
+
+        tree.emplace(k, std::to_string(tree.size()));
+    }
 }
 
 TEST_CASE("Constructors and assignment", "[test]")
@@ -398,7 +426,7 @@ TEST_CASE("Deletion", "[test]")
 TEST_CASE("Ordering", "[test]")
 {
     itree tree;
-    fill(tree, 100);
+    fill(tree, 100, 1000);
 
     SECTION("Base")
     {
@@ -408,7 +436,7 @@ TEST_CASE("Ordering", "[test]")
     SECTION("With insert")
     {
         for(std::size_t i = 0; i < 10; i++)
-            tree.emplace(key_type{std::rand(), std::rand()}, std::to_string(i));
+            tree.emplace(get_random_key(1000), std::to_string(i));
 
         REQUIRE(std::is_sorted(tree.begin(), tree.end(), tree.value_comp()));
     }
@@ -441,7 +469,7 @@ TEST_CASE("Ordering", "[test]")
     SECTION("reverse With insert")
     {
         for(std::size_t i = 0; i < 10; i++)
-            tree.emplace(key_type{std::rand(), std::rand()}, std::to_string(i));
+            tree.emplace(get_random_key(1000), std::to_string(i));
 
         auto comp = tree.value_comp();
 
@@ -496,7 +524,7 @@ TEST_CASE("Swap", "[test]")
 TEST_CASE("Find point", "[test]")
 {
     itree tree;
-    fill(tree, 10000);
+    fill(tree, 10000, 1000);
 
     int point = 250; // Let's get all events at 250;
 
@@ -514,22 +542,9 @@ TEST_CASE("Find point", "[test]")
 
     REQUIRE(!naive.empty());
 
-    std::vector<iterator> find;
-
-    tree.at(point, find);
+    auto find = tree.at(point);
 
     REQUIRE(!find.empty());
-
-    auto bf = find.begin();
-    auto bn = naive.begin();
-
-    while(bf != find.end() && bn != naive.end())
-    {
-        REQUIRE(**bf == *bn);
-        ++bf;
-        ++bn;
-    }
-
     auto comp = tree.value_comp();
 
     REQUIRE(std::is_sorted(find.begin(), find.end(),
@@ -537,15 +552,27 @@ TEST_CASE("Find point", "[test]")
     {
         return comp(*a, *b);
     }));
+
+    //REQUIRE(find.size() == naive.size());
+
+    auto bf = find.begin();
+    auto bn = naive.begin();
+
+    while(bf != find.end() && bn != naive.end())
+    {
+        auto it = *bf;
+        REQUIRE(point <= it->first.second);
+        REQUIRE(point >= it->first.first);
+        REQUIRE(*it == *bn);
+        ++bf;
+        ++bn;
+    }
 }
 
 TEST_CASE("Find interval", "[test]")
 {
     itree tree;
-    fill(tree, 10000);
-
-    for(std::size_t i = 0; i < 100; i++)
-        tree.emplace(key_type{std::rand()%1000, std::rand()%1000}, std::to_string(i));
+    fill(tree, 10000, 1000);
 
     int low = 250;
     int high = 750; // Let's get all events in [250, 750];
@@ -564,21 +591,9 @@ TEST_CASE("Find interval", "[test]")
 
     REQUIRE(!naive.empty());
 
-    std::vector<iterator> find;
-
-    tree.in(low, high, find);
+    auto find = tree.in(low, high);
 
     REQUIRE(!find.empty());
-
-    auto bf = find.begin();
-    auto bn = naive.begin();
-
-    while(bf != find.end() && bn != naive.end())
-    {
-        REQUIRE(**bf == *bn);
-        ++bf;
-        ++bn;
-    }
 
     auto comp = tree.value_comp();
 
@@ -587,6 +602,21 @@ TEST_CASE("Find interval", "[test]")
     {
         return comp(*a, *b);
     }));
+
+    //REQUIRE(find.size() == naive.size());
+
+    auto bf = find.begin();
+    auto bn = naive.begin();
+
+    while(bf != find.end() && bn != naive.end())
+    {
+        auto it = *bf;
+        REQUIRE(low  <= it->first.second);
+        REQUIRE(high >= it->first.first);
+        REQUIRE(*it == *bn);
+        ++bf;
+        ++bn;
+    }
 }
 
 int generate_size()
@@ -599,14 +629,22 @@ int generate_size()
                        100000);
 }
 
+
+
+
+
+
+
+
 TEST_CASE("Benchmarks Copy", "[benchmark]")
 {
     int size = generate_size();
+    int max = std::max(10, size/2);
 
     BENCHMARK_ADVANCED("Copy " + std::to_string(size))(Catch::Benchmark::Chronometer meter)
     {
         itree tree;
-        fill(tree, size);
+        fill(tree, size, max);
 
         meter.measure([&]()
         {
@@ -619,15 +657,16 @@ TEST_CASE("Benchmarks Copy", "[benchmark]")
 TEST_CASE("Benchmarks Emplace", "[benchmark]")
 {
     int size = generate_size();
+    int max = std::max(10, size/2);
 
     BENCHMARK_ADVANCED("Emplace " + std::to_string(size))(Catch::Benchmark::Chronometer meter)
     {
         itree tree;
-        fill(tree, size);
+        fill(tree, size, max);
 
         meter.measure([&](int i)
         {
-            return tree.emplace(key_type{std::rand()%1000, std::rand()%1000}, std::to_string(i));
+            return tree.emplace(get_random_key(max), std::to_string(i));
         });
     };
 }
@@ -635,54 +674,87 @@ TEST_CASE("Benchmarks Emplace", "[benchmark]")
 TEST_CASE("Benchmarks Insert", "[benchmark]")
 {
     int size = generate_size();
+    int max = std::max(10, size/2);
 
     BENCHMARK_ADVANCED("Insert " + std::to_string(size))(Catch::Benchmark::Chronometer meter)
     {
         itree tree;
-        fill(tree, size);
+        fill(tree, size, max);
 
         meter.measure([&](int i)
         {
-            return tree.insert({{std::rand()%1000, std::rand()%1000}, std::to_string(i)});
+            return tree.insert({get_random_key(max), std::to_string(i)});
         });
     };
 }
 
-TEST_CASE("Benchmarks Find Point", "[benchmark]")
+TEST_CASE("Benchmarks Find Point Full Random", "[benchmark]")
 {
     int size = generate_size();
+    int max = std::max(10, size/2);
 
     BENCHMARK_ADVANCED("Find point " + std::to_string(size))(Catch::Benchmark::Chronometer meter)
     {
         itree tree;
-        fill(tree, size);
-
-        std::vector<iterator> find;
-        find.reserve(size/10);
+        fill(tree, size, max);
 
         meter.measure([&](){
-            tree.at(std::rand()%1000, find);
-            return &find;
+            tree.at(std::rand()%max, [](iterator it){ return it; });
+            return;
         });
     };
 }
 
-TEST_CASE("Benchmarks Find Interval", "[benchmark]")
+TEST_CASE("Benchmarks Find Interval Full Random", "[benchmark]")
 {
     int size = generate_size();
-
+    int max = std::max(10, size/2);
 
     BENCHMARK_ADVANCED("Find interval " + std::to_string(size))(Catch::Benchmark::Chronometer meter)
     {
         itree tree;
-        fill(tree, size);
+        fill(tree, size, max);
+
+        meter.measure([&](){
+            tree.in(get_random_key(max), [](iterator it){ return it; });
+            return;
+        });
+    };
+}
+
+TEST_CASE("Benchmarks Find Point More Linear", "[benchmark]")
+{
+    int size = generate_size();
+    int max = std::max(10, size/2);
+
+    BENCHMARK_ADVANCED("Find point " + std::to_string(size))(Catch::Benchmark::Chronometer meter)
+    {
+        itree tree;
+        fill_less_random(tree, size, max);
+
+        meter.measure([&](){
+            tree.at(std::rand()%max, [](iterator it){ return it; });
+            return;
+        });
+    };
+}
+
+TEST_CASE("Benchmarks Find Interval More Linear", "[benchmark]")
+{
+    int size = generate_size();
+    int max = std::max(10, size/2);
+
+    BENCHMARK_ADVANCED("Find interval " + std::to_string(size))(Catch::Benchmark::Chronometer meter)
+    {
+        itree tree;
+        fill_less_random(tree, size, max);
 
         std::vector<iterator> find;
         find.reserve(size/10);
 
         meter.measure([&](){
-            tree.in(std::rand()%1000, std::rand()%1000, find);
-            return &find;
+            tree.in(get_random_key(max), [](iterator it){ return it; });
+            return;
         });
     };
 }
@@ -690,11 +762,12 @@ TEST_CASE("Benchmarks Find Interval", "[benchmark]")
 TEST_CASE("Benchmarks Erase begin", "[benchmark]")
 {
     int size = generate_size();
+    int max = std::max(10, size/2);
 
     BENCHMARK_ADVANCED("Erase Begin " + std::to_string(size))(Catch::Benchmark::Chronometer meter)
     {
         itree tree;
-        fill(tree, std::max(size, meter.runs()));
+        fill(tree, std::max(size, meter.runs()), max);
 
         meter.measure([&]()
         {
@@ -706,11 +779,12 @@ TEST_CASE("Benchmarks Erase begin", "[benchmark]")
 TEST_CASE("Benchmarks Erase middle", "[benchmark]")
 {
     int size = generate_size();
+    int max = std::max(10, size/2);
 
     BENCHMARK_ADVANCED("Erase middle " + std::to_string(size))(Catch::Benchmark::Chronometer meter)
     {
         itree tree;
-        fill(tree, std::max(size, meter.runs()));
+        fill(tree, std::max(size, meter.runs()), max);
 
         int m = tree.size() / 2;
 

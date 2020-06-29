@@ -57,6 +57,7 @@ public:
     class comparator
     {
         friend class interval_tree;
+        friend class const_iterator;
 
     public:
         inline bool operator()(const bound_type& lhs, const bound_type& rhs) const { return less(lhs, rhs); }
@@ -106,7 +107,6 @@ public:
     class iterator
     {
         friend class interval_tree;
-        friend class std::vector<iterator>;
 
     public:
         typedef interval_tree::difference_type  difference_type;
@@ -117,8 +117,10 @@ public:
         typedef interval_tree::const_reference  const_reference;
         typedef std::bidirectional_iterator_tag iterator_category;
 
-    public:
+    protected:
         iterator(const interval_tree* t, node* n = nullptr) : tree(t), n(n) {}
+
+    public:
         iterator() = default;
 
         inline void swap(iterator& other) noexcept
@@ -127,35 +129,14 @@ public:
             std::swap(n, other.n);
         }
 
-        inline bool operator==(const iterator& other) const
-        {
-            return n == other.n;
-        }
+        inline bool operator==(const iterator& other) const { return n == other.n; }
+        inline bool operator!=(const iterator& other) const { return !(*this == other); }
 
-        inline bool operator!=(const iterator& other) const
-        {
-            return !(*this == other);
-        }
+        inline reference operator*()  { return n->data;  }
+        inline pointer   operator->() { return &n->data; }
 
-        inline reference operator*()
-        {
-            return n->data;
-        }
-
-        inline pointer   operator->()
-        {
-            return &n->data;
-        }
-
-        inline const_reference operator*()  const
-        {
-            return n->data;
-        }
-
-        inline const_pointer   operator->() const
-        {
-            return &n->data;
-        }
+        inline const_reference operator*()  const { return n->data;  }
+        inline const_pointer   operator->() const { return &n->data; }
 
         inline iterator& operator++()
         {
@@ -196,49 +177,82 @@ public:
         node*                n    = nullptr;
     };
 
-    class const_iterator : public iterator
+
+
+    class const_iterator
     {
         friend class interval_tree;
 
     public:
-        typedef typename iterator::const_pointer   pointer;
-        typedef typename iterator::const_reference reference;
+        typedef interval_tree::difference_type  difference_type;
+        typedef interval_tree::value_type       value_type;
+        typedef interval_tree::const_pointer    pointer;
+        typedef interval_tree::const_pointer    const_pointer;
+        typedef interval_tree::const_reference  reference;
+        typedef interval_tree::const_reference  const_reference;
+        typedef std::bidirectional_iterator_tag iterator_category;
+
+    protected:
+        const_iterator(const interval_tree* t, node* n = nullptr) : tree(t), n(n) {}
 
     public:
-        const_iterator(const interval_tree* t, node* n = nullptr) : iterator(t, n) {}
-        const_iterator(const iterator& other) : iterator(other.tree, other.n) {}
         const_iterator() = default;
+        const_iterator(const iterator& copy) : tree(copy.tree), n(copy.n) {}
+        const_iterator(iterator&& move) : tree(move.tree), n(move.n) {}
+
+        inline void swap(const_iterator& other) noexcept
+        {
+            std::swap(tree, other.tree);
+            std::swap(n, other.n);
+        }
+
+        inline bool operator==(const const_iterator& other) const { return n == other.n; }
+        inline bool operator!=(const const_iterator& other) const { return !(*this == other); }
+
+        inline reference operator*()  const { return n->data;  }
+        inline pointer   operator->() const { return &n->data; }
+
+        inline const_iterator& operator++()
+        {
+            if(n)
+                n = tree->next(n);
+            else
+                n = tree->leftest(n);
+
+            return *this;
+        }
+
+        inline const_iterator operator++(int)
+        {
+            iterator it(*this);
+            ++*this;
+            return it;
+        }
+
+        inline const_iterator& operator--()
+        {
+            if(n)
+                n = tree->prev(n);
+            else
+                n = tree->rightest(n);
+
+            return *this;
+        }
+
+        inline const_iterator operator--(int)
+        {
+            iterator it(*this);
+            --*this;
+            return it;
+        }
+
+    protected:
+        const interval_tree* tree = nullptr;
+        node*                n    = nullptr;
     };
 
-    class reverse_iterator : public iterator
-    {
-        friend class interval_tree;
-    public:
-        reverse_iterator(const interval_tree* t, node* n = nullptr) : iterator(t, n) {}
-        reverse_iterator() = default;
-
-        inline iterator& operator++()    { return iterator::operator--();  }
-        inline iterator operator++(int)  { return iterator::operator--(0); }
-        inline iterator& operator--()    { return iterator::operator++();  }
-        inline iterator  operator--(int) { return iterator::operator++(0); }
-    };
-
-    class reverse_const_iterator : public const_iterator
-    {
-        friend class interval_tree;
-    public:
-        reverse_const_iterator(const interval_tree* t, node* n = nullptr) : const_iterator(t, n) {}
-        reverse_const_iterator(const reverse_iterator& other) : iterator(other.tree, other.n) {}
-        reverse_const_iterator() = default;
-
-        inline iterator& operator++()    { return iterator::operator--();  }
-        inline iterator operator++(int)  { return iterator::operator--(0); }
-        inline iterator& operator--()    { return iterator::operator++();  }
-        inline iterator  operator--(int) { return iterator::operator++(0); }
-    };
-
-
-
+    typedef std::reverse_iterator<iterator>       reverse_iterator;
+    typedef std::reverse_iterator<const_iterator> reverse_const_iterator;
 
 public:
     // ====== CONSTRUCTORS =====================================================
@@ -337,32 +351,32 @@ public:
 
     inline reverse_iterator rbegin() noexcept
     {
-        return reverse_iterator(this, root ? rightest(root) : nullptr);
+        return reverse_iterator(begin());
     }
 
     inline reverse_const_iterator rbegin() const noexcept
     {
-        return reverse_const_iterator(this, root ? rightest(root) : nullptr);
+        return reverse_const_iterator(begin());
     }
 
     inline reverse_const_iterator crbegin() const noexcept
     {
-        return reverse_const_iterator(this, root ? rightest(root) : nullptr);
+        return reverse_const_iterator(cbegin());
     }
 
     inline reverse_iterator rend() noexcept
     {
-        return reverse_iterator(this);
+        return reverse_iterator(end());
     }
 
     inline reverse_const_iterator rend() const noexcept
     {
-        return reverse_const_iterator(this);
+        return reverse_const_iterator(end());
     }
 
     inline reverse_const_iterator crend() const noexcept
     {
-        return reverse_const_iterator(this);
+        return reverse_const_iterator(cend());
     }
 
 
@@ -540,36 +554,78 @@ public:
         return std::distance(lower_bound(key), upper_bound(key));
     }
 
-    void at(const Key& point, std::vector<iterator>& results)
+    template<class CB>
+    void at(const Key& point, CB callback)       { in(point, point, callback); }
+
+    template<class CB>
+    void at(const Key& point, CB callback) const { in(point, point, callback); }
+
+    std::vector<iterator> at(const Key& point)
     {
-        in(point, point, results);
+        std::vector<iterator> r;
+        at(point, [&](iterator it){ r.push_back(it); });
+        return r;
     }
 
-    void at(const Key& point, std::vector<const_iterator>& results) const
+    std::vector<const_iterator> at(const Key& point) const
     {
-        in(point, point, results);
+        std::vector<const_iterator> r;
+        at(point, [&](const_iterator it){ r.push_back(it); });
+        return r;
     }
 
-    void in(const Key& start, const Key& end, std::vector<iterator>& results)
-    {
-        in({start, end}, results);
-    }
+    template<class CB>
+    void in(const Key& start, const Key& end, CB callback) { in({start, end}, callback); }
 
-    void in(const Key& start, const Key& end, std::vector<const_iterator>& results) const
-    {
-        in({start, end}, results);
-    }
+    template<class CB>
+    void in(const Key& start, const Key& end, CB callback) const { in({start, end}, callback); }
 
-    void in(const key_type& interval, std::vector<iterator>& results)
+    template<class CB>
+    void in(key_type interval, CB callback)
     {
+        if(comp(interval.second, interval.first))
+            throw std::range_error("Invalid interval");
+
         if(root)
-            search(root, interval, results);
+            search(root, interval, [&](node* n){ callback(iterator(this, n)); });
     }
 
-    void in(const key_type& interval, std::vector<const_iterator>& results) const
+    template<class CB>
+    void in(key_type interval, CB callback) const
     {
+        if(comp(interval.second, interval.first))
+            throw std::range_error("Invalid interval");
+
         if(root)
-            search(root, interval, results);
+            search(root, interval, [&](node* n){ callback(const_iterator(this, n)); });
+    }
+
+    std::vector<iterator> in(const Key& start, const Key& end)
+    {
+        std::vector<iterator> r;
+        in(start, end, [&](iterator it){ r.push_back(it); });
+        return r;
+    }
+
+    std::vector<const_iterator> in(const Key& start, const Key& end) const
+    {
+        std::vector<const_iterator> r;
+        in(start, end, [&](const_iterator it){ r.push_back(it); });
+        return r;
+    }
+
+    std::vector<iterator> in(key_type interval)
+    {
+        std::vector<iterator> r;
+        in(interval, [&](iterator it){ r.push_back(it); });
+        return r;
+    }
+
+    std::vector<const_iterator> in(key_type interval) const
+    {
+        std::vector<const_iterator> r;
+        in(interval, [&](const_iterator it){ r.push_back(it); });
+        return r;
     }
 
     iterator find(const key_type& k)
@@ -896,18 +952,30 @@ private:
         return find_leaf_low(k);
     }
 
-    template<class IT>
-    void search(node* n, const key_type& interval, std::vector<IT>& r) const
+    template<class CB>
+    void search(node* n, const key_type& interval, CB cb) const
     {
         if(n->left && comp.greater_eq(n->left->max, interval.first))
-            search(n->left, interval, r);
+            search(n->left, interval, cb);
 
         // if the current node matches
         if(interval_overlaps(interval, n->key()))
-            r.emplace_back(this, n);
+            cb(n);
 
         if(n->right && comp.greater_eq(interval.second, n->lower()))
-            search(n->right, interval, r);
+            search(n->right, interval, cb);
+    }
+
+    template<class CB>
+    void apply(node* n, const CB& cb)
+    {
+        if(n->left)
+            apply(n->left, cb);
+
+        cb(n);
+
+        if(n->right)
+            apply(n->right, cb);
     }
 
     void insert(node* n)
@@ -926,6 +994,9 @@ private:
 
     void insert(node* n, node* p)
     {
+        if(comp(n->upper(), n->lower()))
+            throw std::range_error("Invalid interval");
+
         n->parent = p;
 
         if(comp.less(n->key(), p->key()))
@@ -1064,6 +1135,11 @@ private:
     bool interval_overlaps(const key_type& a, const key_type& b) const
     {
         return comp.less_eq(a.first, b.second) && comp.greater_eq(a.second, b.first);
+    }
+
+    bool interval_encloses(const key_type& a, const key_type& b) const
+    {
+        return comp.less_eq(a.first, b.first) && comp.greater_eq(a.second, b.second);
     }
 
     template<class IT>
