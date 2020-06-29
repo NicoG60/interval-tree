@@ -542,22 +542,22 @@ public:
 
     void at(const Key& point, std::vector<iterator>& results)
     {
-        return in(point, point, results);
+        in(point, point, results);
     }
 
     void at(const Key& point, std::vector<const_iterator>& results) const
     {
-        return in(point, point, results);
+        in(point, point, results);
     }
 
     void in(const Key& start, const Key& end, std::vector<iterator>& results)
     {
-        return in({start, end}, results);
+        in({start, end}, results);
     }
 
     void in(const Key& start, const Key& end, std::vector<const_iterator>& results) const
     {
-        return in({start, end}, results);
+        in({start, end}, results);
     }
 
     void in(const key_type& interval, std::vector<iterator>& results)

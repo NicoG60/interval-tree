@@ -12,6 +12,12 @@ typedef itree::value_type               value_type;
 typedef itree::key_type                 key_type;
 typedef itree::iterator                 iterator;
 
+void fill(itree& tree, int s)
+{
+    for(int i = 0; i < s; i++)
+        tree.emplace(key_type{std::rand()%1000, std::rand()%1000}, std::to_string(i));
+}
+
 TEST_CASE("Constructors and assignment", "[test]")
 {
     SECTION("Default Constructor")
@@ -392,12 +398,7 @@ TEST_CASE("Deletion", "[test]")
 TEST_CASE("Ordering", "[test]")
 {
     itree tree;
-
-    std::srand(0); // Always the same seed. It's just to fill the container
-
-    for(std::size_t i = 0; i < 100; i++)
-        tree.emplace(key_type{std::rand(), std::rand()}, std::to_string(i));
-
+    fill(tree, 100);
 
     SECTION("Base")
     {
@@ -495,11 +496,7 @@ TEST_CASE("Swap", "[test]")
 TEST_CASE("Find point", "[test]")
 {
     itree tree;
-
-    std::srand(0); // Always the same seed. It's just to fill the container
-
-    for(int i = 0; i < 10000; i++)
-        tree.emplace(std::pair<int, int>{std::rand()%1000, std::rand()%1000}, std::to_string(i));
+    fill(tree, 10000);
 
     int point = 250; // Let's get all events at 250;
 
@@ -545,8 +542,7 @@ TEST_CASE("Find point", "[test]")
 TEST_CASE("Find interval", "[test]")
 {
     itree tree;
-
-    std::srand(0); // Always the same seed. It's just to fill the container
+    fill(tree, 10000);
 
     for(std::size_t i = 0; i < 100; i++)
         tree.emplace(key_type{std::rand()%1000, std::rand()%1000}, std::to_string(i));
@@ -591,12 +587,6 @@ TEST_CASE("Find interval", "[test]")
     {
         return comp(*a, *b);
     }));
-}
-
-void fill(itree& tree, int s)
-{
-    for(int i = 0; i < s; i++)
-        tree.emplace(key_type{std::rand()%1000, std::rand()%1000}, std::to_string(i));
 }
 
 int generate_size()
@@ -670,7 +660,10 @@ TEST_CASE("Benchmarks Find Point", "[benchmark]")
         std::vector<iterator> find;
         find.reserve(size/10);
 
-        meter.measure([&](){ tree.at(std::rand()%1000, find); return &find; });
+        meter.measure([&](){
+            tree.at(std::rand()%1000, find);
+            return &find;
+        });
     };
 }
 
@@ -687,7 +680,10 @@ TEST_CASE("Benchmarks Find Interval", "[benchmark]")
         std::vector<iterator> find;
         find.reserve(size/10);
 
-        meter.measure([&](){ tree.in(std::rand()%1000, std::rand()%1000, find); return &find; });
+        meter.measure([&](){
+            tree.in(std::rand()%1000, std::rand()%1000, find);
+            return &find;
+        });
     };
 }
 

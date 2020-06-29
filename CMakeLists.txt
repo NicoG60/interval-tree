@@ -13,4 +13,4 @@ target_link_libraries(${PROJECT_NAME} Catch2::Catch2)
 
 include(CTest)
 include(./third_party/Catch2/contrib/Catch.cmake)
-catch_discover_tests(${PROJECT_NAME})
+catch_discover_tests(${PROJECT_NAME} TEST_SPEC "[test]")

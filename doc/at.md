@@ -16,4 +16,5 @@ The results vector is not cleared before the function start and is filled using 
 
 #### Complexity
 
-Linear
+log N  if only one interval overlaps.
+Linear if all intervals overlaps.

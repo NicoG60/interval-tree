@@ -21,4 +21,5 @@ This function will no clear the result vector and uses `push_back` to fill it. B
 
 #### Complexity
 
-Linear
+log N  if only one interval overlaps.
+Linear if all intervals overlaps.
