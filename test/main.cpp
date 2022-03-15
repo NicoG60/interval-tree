@@ -619,6 +619,136 @@ TEST_CASE("Find interval", "[test]")
     }
 }
 
+struct naive_fraction {
+    int numerator = 0;
+    int denominator = 1;
+
+    friend bool operator<(const naive_fraction& lhs, const naive_fraction& rhs) {
+        const auto& a = lhs.numerator;
+        const auto& b = lhs.denominator;
+        const auto& c = rhs.numerator;
+        const auto& d = rhs.denominator;
+        return b * d * (b * c - a * d) > 0;
+    };
+};
+
+TEST_CASE("Custom Key Type", "[test]")
+{
+    interval_tree<naive_fraction, std::string> tree3{
+        {{{1, 5}, {2, 5}}, "value0"},
+        {{{1, 4}, {2, 4}}, "value1"},
+        {{{1, 3}, {2, 3}}, "value2"},
+        {{{1, 2}, {2, 2}}, "value3"},
+        {{{1, 1}, {2, 1}}, "value4"},
+    };
+
+    SECTION("Ordering")
+    {
+        REQUIRE(std::is_sorted(tree3.begin(), tree3.end(), tree3.value_comp()));
+    }
+
+    std::set<std::string> expected_values;
+    std::set<std::string> actual_values;
+
+    SECTION("Find point")
+    {
+        expected_values = {"value0", "value1"};
+        actual_values.clear();
+        tree3.at({1, 4}, [&](auto it){return actual_values.insert(it->second);});
+        REQUIRE(expected_values == actual_values);
+
+        expected_values = {"value0", "value1", "value2"};
+        actual_values.clear();
+        tree3.at({2, 5}, [&](auto it){return actual_values.insert(it->second);});
+        REQUIRE(expected_values == actual_values);
+
+        expected_values.clear();
+        actual_values.clear();
+        tree3.at({1, 6}, [&](auto it){return actual_values.insert(it->second);});
+        REQUIRE(expected_values == actual_values);
+    }
+
+    SECTION("Find Interval")
+    {
+        expected_values = {"value1", "value2", "value3", "value4"};
+        actual_values.clear();
+        tree3.in({1, 2}, {1, 1}, [&](auto it){return actual_values.insert(it->second);});
+        REQUIRE(expected_values == actual_values);
+
+        expected_values = {"value0"};
+        actual_values.clear();
+        tree3.in({0, 1}, {1, 5}, [&](auto it){return actual_values.insert(it->second);});
+        REQUIRE(expected_values == actual_values);
+    }
+}
+
+struct int_pair {
+    int numerator;
+    int denominator;
+};
+
+auto compare_as_fractions = [](const int_pair& lhs, const int_pair& rhs){
+    const auto& a = lhs.numerator;
+    const auto& b = lhs.denominator;
+    const auto& c = rhs.numerator;
+    const auto& d = rhs.denominator;
+    return b * d * (b * c - a * d) > 0;
+};
+
+TEST_CASE("Custom Comparator", "[test]")
+{
+    interval_tree<int_pair, std::string, decltype(compare_as_fractions)> tree4{
+        {
+            {{{1, 5}, {2, 5}}, "value0"},
+            {{{1, 4}, {2, 4}}, "value1"},
+            {{{1, 3}, {2, 3}}, "value2"},
+            {{{1, 2}, {2, 2}}, "value3"},
+            {{{1, 1}, {2, 1}}, "value4"}
+        },
+        compare_as_fractions
+    };
+
+    SECTION("Ordering")
+    {
+        REQUIRE(std::is_sorted(tree4.begin(), tree4.end(), tree4.value_comp()));
+    }
+
+    std::set<std::string> expected_values;
+    std::set<std::string> actual_values;
+
+    SECTION("Find point")
+    {
+        expected_values = {"value0", "value1"};
+        actual_values.clear();
+        tree4.at({1, 4}, [&](auto it){return actual_values.insert(it->second);});
+        REQUIRE(expected_values == actual_values);
+
+        expected_values = {"value0", "value1", "value2"};
+        actual_values.clear();
+        tree4.at({2, 5}, [&](auto it){return actual_values.insert(it->second);});
+        REQUIRE(expected_values == actual_values);
+
+        expected_values.clear();
+        actual_values.clear();
+        tree4.at({1, 6}, [&](auto it){return actual_values.insert(it->second);});
+        REQUIRE(expected_values == actual_values);
+    }
+
+    SECTION("Find Interval")
+    {
+        expected_values = {"value1", "value2", "value3", "value4"};
+        actual_values.clear();
+        tree4.in({1, 2}, {1, 1}, [&](auto it){return actual_values.insert(it->second);});
+        REQUIRE(expected_values == actual_values);
+
+        expected_values = {"value0"};
+        actual_values.clear();
+        tree4.in({0, 1}, {1, 5}, [&](auto it){return actual_values.insert(it->second);});
+        REQUIRE(expected_values == actual_values);
+    }
+}
+
+
 int generate_size()
 {
     return GENERATE(0, 1,     2,     5,     7,

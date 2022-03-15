@@ -2,6 +2,7 @@
 #define INTERVAL_TREE_H
 
 #include <algorithm>
+#include <type_traits>
 #include <vector>
 #include <utility>
 #include <stdexcept>
@@ -10,7 +11,7 @@ template<
     typename Key,
     typename T,
     typename Compare = std::less<Key>,
-    typename std::enable_if<std::is_arithmetic<Key>::value, int>::type = 0
+    typename std::enable_if<std::is_default_constructible<Key>::value, int>::type = 0
 >
 class interval_tree
 {
@@ -50,7 +51,7 @@ public:
 
         int         height  = 1;
         int         bfactor = 0;
-        bound_type  max     = 0;
+        bound_type  max = bound_type();
         value_type  data;
     };
 
@@ -722,21 +723,21 @@ private:
 
         if(n->right)
         {
-            m = std::max(m, n->right->max);
+            m = std::max(m, n->right->max, comp.comp);
             h = n->right->height + 1;
             b = n->right->height;
         }
 
         if(n->left)
         {
-            m  = std::max(m, n->left->max);
+            m  = std::max(m, n->left->max, comp.comp);
             h  = std::max(h, n->left->height + 1);
             b -= n->left->height;
         }
 
 
 
-        if(n->max     != m ||
+        if(comp.neq(n->max, m) ||
            n->height  != h ||
            n->bfactor != b ||
            (!n->left && !n->right))
