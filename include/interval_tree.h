@@ -525,7 +525,7 @@ public:
         if(!root)
             return 0;
 
-        node* n = find(root, key);
+        node* n = _find<node*>(key);
 
         if(!n)
             return 0;
