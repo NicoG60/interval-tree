@@ -425,7 +425,7 @@ public:
     template<class P, typename std::enable_if<std::is_convertible<value_type, P&&>::value, int>::type = 0>
     iterator insert(P&& value)
     {
-        return emplace(std::forward(value));
+        return emplace(std::forward<P>(value));
     }
 
     iterator insert(const_iterator hint, const value_type& value)
