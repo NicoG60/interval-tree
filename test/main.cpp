@@ -619,6 +619,42 @@ TEST_CASE("Find interval", "[test]")
     }
 }
 
+TEST_CASE("Equality", "[test]")
+{
+    itree tree{
+        {{0, 1}, "value0"},
+        {{1, 2}, "value1"},
+    };
+
+    itree tree2;
+    tree2.insert({{1, 2}, "value1"});
+    tree2.insert({{0, 1}, "value0"});
+
+    REQUIRE(tree == tree2);
+
+    itree tree3{
+        {{0, 1}, "value0"},
+        {{1, 2}, "value1"},
+        {{1, 2}, "value1"},
+    };
+
+    REQUIRE(tree != tree3);
+
+    itree tree4{
+        {{0, 1}, "value0"},
+        {{1, 3}, "value1"},
+    };
+
+    REQUIRE(tree != tree4);
+
+    itree tree5{
+        {{0, 1}, "value0"},
+        {{1, 2}, "value2"},
+    };
+
+    REQUIRE(tree != tree5);
+}
+
 struct naive_fraction {
     int numerator = 0;
     int denominator = 1;
