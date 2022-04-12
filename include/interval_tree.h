@@ -1206,7 +1206,7 @@ bool operator==(const interval_tree<K, T, C>& lhs,
     auto rit = rhs.cbegin();
     auto er  = rhs.cend();
 
-    while(lit != el && rit != er)
+    for(;lit != el && rit != er; ++lit, ++rit)
     {
         if(*lit != *rit)
             return false;
