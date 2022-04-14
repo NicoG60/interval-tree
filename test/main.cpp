@@ -458,12 +458,14 @@ TEST_CASE("Ordering", "[test]")
     SECTION("reverse Base")
     {
         auto comp = tree.value_comp();
-
+        bool actually_checked = false;
         REQUIRE(std::is_sorted(tree.rbegin(), tree.rend(),
         [&](const value_type& a, const value_type& b)
         {
+            actually_checked = true;
             return !comp(a, b);
         }));
+        REQUIRE(actually_checked);
     }
 
     SECTION("reverse With insert")
@@ -781,6 +783,29 @@ TEST_CASE("Custom Comparator", "[test]")
         actual_values.clear();
         tree4.in({0, 1}, {1, 5}, [&](auto it){return actual_values.insert(it->second);});
         REQUIRE(expected_values == actual_values);
+    }
+}
+
+TEST_CASE("Iterators", "[test]")
+{
+    itree tree{
+        {{0, 1}, "value0"},
+        {{1, 2}, "value1"},
+        {{2, 3}, "value2"},
+        {{3, 4}, "value3"},
+        {{4, 5}, "value4"},
+        {{5, 6}, "value5"},
+        {{6, 7}, "value6"}
+    };
+
+    SECTION("Reverse")
+    {
+        REQUIRE(tree.rbegin()->second == "value6");
+    }
+
+    SECTION("Const Reverse")
+    {
+        REQUIRE(tree.crbegin()->second == "value6");
     }
 }
 
