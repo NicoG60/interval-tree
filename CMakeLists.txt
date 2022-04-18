@@ -8,6 +8,7 @@ add_subdirectory(./third_party/Catch2)
 
 enable_testing()
 
+add_compile_definitions(INTERVAL_TREE_UNIT_TESTING)
 add_executable(${PROJECT_NAME} test/main.cpp)
 target_link_libraries(${PROJECT_NAME} Catch2::Catch2)
 
