@@ -78,7 +78,35 @@ TEST_CASE("Constructors and assignment", "[test]")
 
     SECTION("Move constructor")
     {
-        itree tree(itree{{{0, 1}, "value0"}});
+        // Use an old fashioned pointer to be able to handle the lifetime of
+        // moved_tree explicitely and kill it before tree is tested
+        itree* moved_tree = new itree{{{0, 1}, "value0"}};
+        const auto old_root = moved_tree->__get_root();
+        itree tree(std::move(*moved_tree));
+        delete moved_tree;
+
+        REQUIRE(tree.__get_root() == old_root);
+
+        auto it = tree.begin();
+
+        REQUIRE(it->first == key_type(0, 1));
+        REQUIRE(it->second == "value0");
+    }
+
+    SECTION("Move assignement")
+    {
+        itree tree;
+        itree::node* old_root;
+        {
+            // moved_tree is created in an anonymous scope to be sure :
+            //  - it's 100% dead when we exit
+            //  - the move-assigned tree is not referring to something dead
+            itree moved_tree{{{0, 1}, "value0"}};
+            old_root = moved_tree.__get_root();
+            tree = std::move(moved_tree);
+        }
+
+        REQUIRE(tree.__get_root() == old_root);
 
         auto it = tree.begin();
 
