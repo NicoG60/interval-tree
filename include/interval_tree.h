@@ -740,20 +740,12 @@ private:
             b -= n->left->height;
         }
 
+        n->max     = m;
+        n->height  = h;
+        n->bfactor = b;
 
-
-        if(comp.neq(n->max, m) ||
-           n->height  != h ||
-           n->bfactor != b ||
-           (!n->left && !n->right))
-        {
-            n->max     = m;
-            n->height  = h;
-            n->bfactor = b;
-
-            if(n->parent)
-                update_props(n->parent);
-        }
+        if(n->parent)
+            update_props(n->parent);
     }
 
     void delete_node(node* n)

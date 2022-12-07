@@ -54,6 +54,7 @@ TEST_CASE("Constructors and assignment", "[test]")
         REQUIRE(tree.empty());
         REQUIRE(tree.size() == 0);
         REQUIRE(tree.begin() == tree.end());
+        REQUIRE(std::distance(tree.begin(), tree.end()) == 0);
     }
 
     SECTION("Initializer list Constructor")
@@ -61,6 +62,7 @@ TEST_CASE("Constructors and assignment", "[test]")
         itree tree{{{0, 1}, "value0"}};
         REQUIRE_FALSE(tree.empty());
         REQUIRE(tree.size() == 1);
+        REQUIRE(std::distance(tree.begin(), tree.end()) == 1);
         auto it = tree.begin();
         REQUIRE(it != tree.end());
         REQUIRE(it->first.first  == 0);
@@ -129,6 +131,7 @@ TEST_CASE("Insertion", "[test]")
         REQUIRE(it->first == key_type(0, 1));
         REQUIRE(it->second == "value0");
         REQUIRE(tree.size() == 1);
+        REQUIRE(std::distance(tree.begin(), tree.end()) == 1);
         REQUIRE(++it == tree.end());
     }
 
@@ -147,6 +150,7 @@ TEST_CASE("Insertion", "[test]")
         REQUIRE(it2->first == key_type(0, 2));
         REQUIRE(it2->second == "value2");
         REQUIRE(tree.size() == 3);
+        REQUIRE(std::distance(tree.begin(), tree.end()) == 3);
         REQUIRE(++it0 == it1);
         REQUIRE(++it0 == it2);
         REQUIRE(++it0 == tree.end());
@@ -167,6 +171,7 @@ TEST_CASE("Insertion", "[test]")
         REQUIRE(it2->first == key_type(0, 2));
         REQUIRE(it2->second == "value2");
         REQUIRE(tree.size() == 3);
+        REQUIRE(std::distance(tree.begin(), tree.end()) == 3);
         REQUIRE(++it0 == it1);
         REQUIRE(++it0 == it2);
         REQUIRE(++it0 == tree.end());
@@ -187,6 +192,7 @@ TEST_CASE("Insertion", "[test]")
         REQUIRE(it2->first == key_type(0, 2));
         REQUIRE(it2->second == "value2");
         REQUIRE(tree.size() == 3);
+        REQUIRE(std::distance(tree.begin(), tree.end()) == 3);
         REQUIRE(++it0 == it1);
         REQUIRE(++it0 == it2);
         REQUIRE(++it0 == tree.end());
@@ -207,6 +213,7 @@ TEST_CASE("Insertion", "[test]")
         REQUIRE(it2->first == key_type(0, 2));
         REQUIRE(it2->second == "value2");
         REQUIRE(tree.size() == 3);
+        REQUIRE(std::distance(tree.begin(), tree.end()) == 3);
         REQUIRE(++it0 == it1);
         REQUIRE(++it0 == it2);
         REQUIRE(++it0 == tree.end());
@@ -227,6 +234,7 @@ TEST_CASE("Insertion", "[test]")
         REQUIRE(it2->first == key_type(0, 2));
         REQUIRE(it2->second == "value2");
         REQUIRE(tree.size() == 3);
+        REQUIRE(std::distance(tree.begin(), tree.end()) == 3);
         REQUIRE(++it0 == it1);
         REQUIRE(++it0 == it2);
         REQUIRE(++it0 == tree.end());
@@ -247,6 +255,7 @@ TEST_CASE("Insertion", "[test]")
         REQUIRE(it2->first == key_type(0, 2));
         REQUIRE(it2->second == "value2");
         REQUIRE(tree.size() == 3);
+        REQUIRE(std::distance(tree.begin(), tree.end()) == 3);
         REQUIRE(++it0 == it1);
         REQUIRE(++it0 == it2);
         REQUIRE(++it0 == tree.end());
@@ -281,6 +290,8 @@ TEST_CASE("Insert overloads", "[test]")
         ++it;
         REQUIRE(it->first == key_type(4, 5));
         REQUIRE(it->second == "value4");
+        REQUIRE(std::distance(tree.begin(), tree.end()) == 7);
+        REQUIRE(tree.size() == 7);
     }
 
     SECTION("Insert move")
@@ -297,6 +308,8 @@ TEST_CASE("Insert overloads", "[test]")
         ++it;
         REQUIRE(it->first == key_type(4, 5));
         REQUIRE(it->second == "value4");
+        REQUIRE(std::distance(tree.begin(), tree.end()) == 7);
+        REQUIRE(tree.size() == 7);
     }
 
     SECTION("Insert hint")
@@ -318,6 +331,8 @@ TEST_CASE("Insert overloads", "[test]")
         ++it;
         REQUIRE(it->first == std::pair<int, int>(4, 5));
         REQUIRE(it->second == "value4");
+        REQUIRE(std::distance(tree.begin(), tree.end()) == 7);
+        REQUIRE(tree.size() == 7);
     }
 
     SECTION("Insert iterators")
@@ -327,6 +342,8 @@ TEST_CASE("Insert overloads", "[test]")
         tree.insert(tree2.begin(), tree2.end());
 
         REQUIRE(std::is_sorted(tree.begin(), tree.end(), tree.value_comp()));
+        REQUIRE(std::distance(tree.begin(), tree.end()) == 12);
+        REQUIRE(tree.size() == 12);
     }
 
     SECTION("Insert ilist")
@@ -341,6 +358,8 @@ TEST_CASE("Insert overloads", "[test]")
                     });
 
         REQUIRE(std::is_sorted(tree.begin(), tree.end(), tree.value_comp()));
+        REQUIRE(std::distance(tree.begin(), tree.end()) == 12);
+        REQUIRE(tree.size() == 12);
     }
 }
 
@@ -370,6 +389,8 @@ TEST_CASE("Emplaces overloads", "[test]")
         ++it;
         REQUIRE(it->first == key_type(4, 5));
         REQUIRE(it->second == "value4");
+        REQUIRE(std::distance(tree.begin(), tree.end()) == 7);
+        REQUIRE(tree.size() == 7);
     }
 
     SECTION("Emplace hint")
@@ -391,6 +412,8 @@ TEST_CASE("Emplaces overloads", "[test]")
         ++it;
         REQUIRE(it->first == std::pair<int, int>(4, 5));
         REQUIRE(it->second == "value4");
+        REQUIRE(std::distance(tree.begin(), tree.end()) == 7);
+        REQUIRE(tree.size() == 7);
     }
 }
 
@@ -407,6 +430,7 @@ TEST_CASE("Deletion", "[test]")
     };
 
     REQUIRE(tree.size() == 7);
+    REQUIRE(std::distance(tree.begin(), tree.end()) == 7);
     REQUIRE(std::is_sorted(tree.begin(), tree.end(), tree.value_comp()));
 
     SECTION("Delete leaf")
@@ -415,6 +439,7 @@ TEST_CASE("Deletion", "[test]")
 
         REQUIRE(std::is_sorted(tree.begin(), tree.end(), tree.value_comp()));
         REQUIRE(tree.size() == 6);
+        REQUIRE(std::distance(tree.begin(), tree.end()) == 6);
         REQUIRE(it->first == key_type(1, 2));
         REQUIRE(it->second == "value1");
     }
@@ -425,6 +450,7 @@ TEST_CASE("Deletion", "[test]")
 
         REQUIRE(std::is_sorted(tree.begin(), tree.end(), tree.value_comp()));
         REQUIRE(tree.size() == 6);
+        REQUIRE(std::distance(tree.begin(), tree.end()) == 6);
         REQUIRE(it->first == key_type(2, 3));
         REQUIRE(it->second == "value2");
     }
@@ -438,6 +464,7 @@ TEST_CASE("Deletion", "[test]")
 
         REQUIRE(std::is_sorted(tree.begin(), tree.end(), tree.value_comp()));
         REQUIRE(tree.size() == 6);
+        REQUIRE(std::distance(tree.begin(), tree.end()) == 6);
         REQUIRE(it->first == key_type(4, 5));
         REQUIRE(it->second == "value4");
     }
@@ -448,6 +475,7 @@ TEST_CASE("Deletion", "[test]")
 
         REQUIRE(tree.empty());
         REQUIRE(tree.begin() == tree.end());
+        REQUIRE(std::distance(tree.begin(), tree.end()) == 0);
     }
 }
 
@@ -467,6 +495,8 @@ TEST_CASE("Ordering", "[test]")
             tree.emplace(get_random_key(1000), std::to_string(i));
 
         REQUIRE(std::is_sorted(tree.begin(), tree.end(), tree.value_comp()));
+        REQUIRE(tree.size() == 110);
+        REQUIRE(std::distance(tree.begin(), tree.end()) == 110);
     }
 
     SECTION("With deletes")
@@ -481,6 +511,8 @@ TEST_CASE("Ordering", "[test]")
         }
 
         REQUIRE(std::is_sorted(tree.begin(), tree.end(), tree.value_comp()));
+        REQUIRE(tree.size() == 90);
+        REQUIRE(std::distance(tree.begin(), tree.end()) == 90);
     }
 
     SECTION("reverse Base")
@@ -501,6 +533,9 @@ TEST_CASE("Ordering", "[test]")
         for(std::size_t i = 0; i < 10; i++)
             tree.emplace(get_random_key(1000), std::to_string(i));
 
+        REQUIRE(tree.size() == 110);
+        REQUIRE(std::distance(tree.begin(), tree.end()) == 110);
+
         auto comp = tree.value_comp();
 
         REQUIRE(std::is_sorted(tree.rbegin(), tree.rend(),
@@ -520,6 +555,9 @@ TEST_CASE("Ordering", "[test]")
                 it++;
             tree.erase(it);
         }
+
+        REQUIRE(tree.size() == 90);
+        REQUIRE(std::distance(tree.begin(), tree.end()) == 90);
 
         auto comp = tree.value_comp();
 
@@ -583,7 +621,7 @@ TEST_CASE("Find point", "[test]")
         return comp(*a, *b);
     }));
 
-    //REQUIRE(find.size() == naive.size());
+    REQUIRE(find.size() == naive.size());
 
     auto bf = find.begin();
     auto bn = naive.begin();
