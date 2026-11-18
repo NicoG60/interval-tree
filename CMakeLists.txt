@@ -3,15 +3,22 @@ project(interval_tree_test VERSION 0.1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 
-include_directories(./include)
-add_subdirectory(./third_party/Catch2)
+option(INTERVAL_TREE_BUILD_TESTS "Build the unit tests"  OFF)
 
-enable_testing()
+add_library(interval_tree INTERFACE)
+target_include_directories(interval_tree INTERFACE include)
 
-add_compile_definitions(INTERVAL_TREE_UNIT_TESTING)
-add_executable(${PROJECT_NAME} test/main.cpp)
-target_link_libraries(${PROJECT_NAME} Catch2::Catch2)
+if(${INTERVAL_TREE_BUILD_TESTS})
+    include_directories(./include)
+    add_subdirectory(./third_party/Catch2)
 
-include(CTest)
-include(./third_party/Catch2/contrib/Catch.cmake)
-catch_discover_tests(${PROJECT_NAME} TEST_SPEC "[test]")
+    enable_testing()
+
+    add_compile_definitions(INTERVAL_TREE_UNIT_TESTING)
+    add_executable(${PROJECT_NAME} test/main.cpp)
+    target_link_libraries(${PROJECT_NAME} Catch2::Catch2)
+
+    include(CTest)
+    include(./third_party/Catch2/contrib/Catch.cmake)
+    catch_discover_tests(${PROJECT_NAME} TEST_SPEC "[test]")
+endif()
